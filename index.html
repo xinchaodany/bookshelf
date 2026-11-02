@@ -328,6 +328,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       </div></div>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="srow"><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
+    <div class="srow"><span class="slabel" data-i="appSize"></span>
+      <div class="step"><button type="button" data-step="uiScale:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="scaleOut"></output><button type="button" data-step="uiScale:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
     <div class="srow"><span class="slabel" data-i="uiLangLabel"></span>
       <div class="seg" role="group"><button type="button" data-ui="en">EN</button><button type="button" data-ui="vi">VI</button></div></div>
     <p class="hint" id="dispMode" style="margin:0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))"></p>
@@ -360,7 +362,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as read', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as read', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -389,7 +391,7 @@ const I18N = {
     noMatch:'Không có sách nào khớp với “{q}”.', count:'{n} cuốn sách trên thiết bị này',
     sortBy:'Sắp xếp theo', sRecent:'Gần đây', sAdded:'Ngày thêm', sTitle:'Tên sách', sAuthor:'Tác giả', sProgress:'Tiến độ',
     edit:'Sửa', more:'Thông tin “{t}”', editTitle:'Thông tin sách', fTitle:'Tên sách', fAuthor:'Tác giả', fLang:'Ngôn ngữ', fDesc:'Mô tả',
-    fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', displayMode:'Chế độ hiển thị: {m}', noSeries:'Không thuộc bộ nào', newSeries:'Bộ sách mới…', seriesName:'Tên bộ sách mới', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
+    fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', appSize:'Cỡ giao diện', displayMode:'Chế độ hiển thị: {m}', noSeries:'Không thuộc bộ nào', newSeries:'Bộ sách mới…', seriesName:'Tên bộ sách mới', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
     save:'Lưu', cancel:'Hủy', del:'Gỡ khỏi thư viện', delConfirm:'Chạm lần nữa để gỡ', saved:'Đã lưu thông tin', deleted:'Đã gỡ khỏi thư viện. Tệp gốc của bạn vẫn còn nguyên.',
     langEn:'Tiếng Anh', langVi:'Tiếng Việt', langOther:'Khác',
     library:'Thư viện', chapters:'Mục lục', settings:'Cài đặt đọc', close:'Đóng', menu:'Menu',
@@ -869,12 +871,29 @@ const BUILTIN = [
   { v:'sys-serif', n:'sysSerif', css:'Georgia, "Times New Roman", serif', i:true },
   { v:'sys-sans', n:'sysSans', css:'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', i:true }
 ];
-const LIM = { size:[14, 34, 1], lh:[1.2, 2.2, 0.1], mx:[8, 48, 4], rate:[0.5, 2.5, 0.1] };
+const LIM = { size:[14, 34, 1], lh:[1.2, 2.2, 0.1], mx:[8, 48, 4], rate:[0.5, 2.5, 0.1], uiScale:[60, 120, 10] };
 let userFonts = [];
-let prefs = Object.assign({ font:'Literata', size:20, lh:1.6, mx:22, bold:false, rt:'auto', rate:1, bg:true, fs:false }, store.get('prefs', {}));
+let prefs = Object.assign({ font:'Literata', size:20, lh:1.6, mx:22, bold:false, rt:'auto', rate:1, bg:true, fs:false, uiScale:100 }, store.get('prefs', {}));
 if (prefs.rt === 'sepia') prefs.rt = 'paper';
 if (prefs.rt === 'night') prefs.rt = 'invert';
 function savePrefs(){ store.set('prefs', prefs); }
+/* App size: makes the phone lay out a wider page, so everything (menus, buttons and text) draws smaller */
+function applyScale(){
+  const meta = document.querySelector('meta[name=viewport]'); if (!meta) return;
+  const s = prefs.uiScale || 100;
+  const content = s === 100 ? 'width=device-width, initial-scale=1, viewport-fit=cover'
+    : 'width=' + Math.round((screen.width || innerWidth) * 100 / s) + ', initial-scale=' + s / 100 + ', minimum-scale=' + s / 100 + ', maximum-scale=' + s / 100 + ', viewport-fit=cover';
+  if (meta.getAttribute('content') !== content) meta.setAttribute('content', content);
+}
+/* Some browsers only apply a new app size on reload: reload and reopen the same book */
+function checkScale(){
+  setTimeout(() => {
+    const s = prefs.uiScale || 100, want = Math.round((screen.width || innerWidth) * 100 / s);
+    if (Math.abs(innerWidth - want) <= 2) return;
+    try { if (cur) { saveProgress(true); sessionStorage.setItem('bs-reopen', JSON.stringify({ id: cur.meta.id, settings: true })); } } catch {}
+    setTimeout(() => location.reload(), 150);
+  }, 400);
+}
 function fontCss(key){
   if (key.startsWith('uf:')) return `"uf-${key.slice(3)}", Literata, Georgia, serif`;
   return (BUILTIN.find(f => f.v === key) || BUILTIN[0]).css;
@@ -925,6 +944,7 @@ function applyPrefs(){
   pg.style.setProperty('--rw', prefs.bold ? 550 : 400);
   const pv = $('#preview'); pv.style.fontFamily = fontCss(prefs.font); pv.style.fontWeight = prefs.bold ? 550 : 400;
   $('#sizeOut').textContent = prefs.size; $('#lhOut').textContent = Number(prefs.lh).toFixed(1); $('#mxOut').textContent = prefs.mx;
+  $('#scaleOut').textContent = prefs.uiScale + '%'; applyScale();
   $('#boldBtn').setAttribute('aria-pressed', prefs.bold);
   document.body.dataset.rt = prefs.rt;
   document.querySelectorAll('#rtSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.rt === prefs.rt));
@@ -935,6 +955,7 @@ $('#fontSel').onchange = e => { prefs.font = e.target.value; savePrefs(); applyP
 document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
   const [k, d] = b.dataset.step.split(':'); const [lo, hi, st] = LIM[k];
   prefs[k] = Math.round(Math.min(hi, Math.max(lo, prefs[k] + st * +d)) * 100) / 100; savePrefs(); applyPrefs();
+  if (k === 'uiScale') checkScale();
 });
 $('#boldBtn').onclick = () => { prefs.bold = !prefs.bold; savePrefs(); applyPrefs(); };
 $('#rtSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; prefs.rt = b.dataset.rt; savePrefs(); applyPrefs(); };
@@ -1331,9 +1352,15 @@ addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files'))
 addEventListener('drop', e => { if (!e.dataTransfer?.files.length) return; e.preventDefault(); if (!cur) addFiles([...e.dataTransfer.files]); });
 addEventListener('pagehide', () => saveProgress(true));
 
-mountIcons(); disarmDelete();
-applyPrefs(); applyI18n(); refreshLibrary(); loadFonts();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+mountIcons(); disarmDelete();
+applyPrefs(); applyI18n(); refreshLibrary().then(() => {
+  try {
+    const r = JSON.parse(sessionStorage.getItem('bs-reopen') || 'null'); sessionStorage.removeItem('bs-reopen');
+    if (r && r.id) openBook(r.id).then(() => { if (r.settings) $('#setBtn').click(); });
+  } catch {}
+});
+loadFonts();
 </script>
 </body>
 </html>
