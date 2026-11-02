@@ -328,8 +328,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       </div></div>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="srow"><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
-    <div class="srow" style="padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))"><span class="slabel" data-i="uiLangLabel"></span>
+    <div class="srow"><span class="slabel" data-i="uiLangLabel"></span>
       <div class="seg" role="group"><button type="button" data-ui="en">EN</button><button type="button" data-ui="vi">VI</button></div></div>
+    <p class="hint" id="dispMode" style="margin:0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))"></p>
   </div>
 </dialog>
 
@@ -359,7 +360,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as read', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as read', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -388,7 +389,7 @@ const I18N = {
     noMatch:'Không có sách nào khớp với “{q}”.', count:'{n} cuốn sách trên thiết bị này',
     sortBy:'Sắp xếp theo', sRecent:'Gần đây', sAdded:'Ngày thêm', sTitle:'Tên sách', sAuthor:'Tác giả', sProgress:'Tiến độ',
     edit:'Sửa', more:'Thông tin “{t}”', editTitle:'Thông tin sách', fTitle:'Tên sách', fAuthor:'Tác giả', fLang:'Ngôn ngữ', fDesc:'Mô tả',
-    fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', noSeries:'Không thuộc bộ nào', newSeries:'Bộ sách mới…', seriesName:'Tên bộ sách mới', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
+    fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', displayMode:'Chế độ hiển thị: {m}', noSeries:'Không thuộc bộ nào', newSeries:'Bộ sách mới…', seriesName:'Tên bộ sách mới', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
     save:'Lưu', cancel:'Hủy', del:'Gỡ khỏi thư viện', delConfirm:'Chạm lần nữa để gỡ', saved:'Đã lưu thông tin', deleted:'Đã gỡ khỏi thư viện. Tệp gốc của bạn vẫn còn nguyên.',
     langEn:'Tiếng Anh', langVi:'Tiếng Việt', langOther:'Khác',
     library:'Thư viện', chapters:'Mục lục', settings:'Cài đặt đọc', close:'Đóng', menu:'Menu',
@@ -1099,7 +1100,12 @@ vp.addEventListener('click', e => {
 $('#scrim').onclick = () => showChrome(false);
 $('#menuBtn').onclick = () => showChrome(true);
 $('#backBtn').onclick = closeReader;
-$('#setBtn').onclick = () => { showChrome(false); $('#hintRow').hidden = store.get('hintSeen', false); $('#setDlg').showModal(); };
+$('#setBtn').onclick = () => {
+  showChrome(false); $('#hintRow').hidden = store.get('hintSeen', false);
+  const mode = document.fullscreenElement ? 'fullscreen (browser)' : (['fullscreen', 'standalone', 'minimal-ui'].find(m => matchMedia('(display-mode: ' + m + ')').matches) || 'browser');
+  $('#dispMode').textContent = t('displayMode', { m: mode });
+  $('#setDlg').showModal();
+};
 $('#setDlg').addEventListener('close', () => store.set('hintSeen', true));
 $('#tipX').onclick = () => { store.set('tipSeen', true); updateTTSBar(); };
 $('#hintX').onclick = () => { store.set('hintSeen', true); $('#hintRow').hidden = true; };
