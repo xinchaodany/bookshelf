@@ -187,6 +187,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .ufonts li{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:16px}
 .ufonts .btn{min-height:38px;padding:0 12px}
 .slabel{font-weight:600;font-size:15px}
+.faillist{list-style:none;margin:0;padding:4px 18px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:10px;max-height:60vh;overflow:auto}
+.faillist li{display:grid;gap:2px;font-size:14px;border-bottom:1px solid var(--soft);padding-bottom:8px}
+.faillist b{overflow-wrap:anywhere}
+.faillist span{color:var(--muted)}
 .toc{list-style:none;margin:0;padding:0 0 calc(12px + env(safe-area-inset-bottom,0px))}
 .toc li{border-bottom:1px solid var(--soft)}
 .toc button{all:unset;box-sizing:border-box;display:block;width:100%;padding:13px 18px;cursor:pointer;font-size:16px;line-height:1.35}
@@ -323,13 +327,19 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   </div>
 </dialog>
 
+<!-- ============ Files that couldn't be added ============ -->
+<dialog id="failDlg">
+  <div class="dh"><h2 id="failTitle"></h2><button class="btn plain icon" type="button" data-close data-ia="close"><i data-ic="close-line"></i></button></div>
+  <ul class="faillist" id="failList"></ul>
+</dialog>
+
 <!-- ============ Chapters ============ -->
 <dialog id="tocDlg">
   <div class="dh"><h2 data-i="chapters"></h2><button class="btn plain icon" type="button" data-close data-ia="close"><i data-ic="close-line"></i></button></div>
   <ul class="toc" id="tocList"></ul>
 </dialog>
 
-<input type="file" id="bookInput" class="sr" multiple accept=".epub,.txt,.md,.markdown,.html,.htm,.xhtml,.ttf,.otf,.woff,.woff2">
+<input type="file" id="bookInput" class="sr" multiple accept=".epub,.txt,.md,.markdown,.html,.htm,.xhtml,.zip,.ttf,.otf,.woff,.woff2">
 <input type="file" id="fontInput" class="sr" accept=".ttf,.otf,.woff,.woff2">
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
@@ -339,7 +349,7 @@ const I18N = {
   en: {
     brand:'Bookshelf', search:'Search books', addBooks:'Add books',
     emptyTitle:'Nothing on the shelf yet',
-    emptyBody:'Add EPUB, TXT, Markdown or HTML files. They’re saved on this device only.',
+    emptyBody:'Add EPUB, TXT, Markdown or HTML files, or a ZIP full of them. They’re saved on this device only.',
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
@@ -358,7 +368,7 @@ const I18N = {
     tip:'Tap the left or right edge (or swipe) to turn pages, the middle for this menu. While listening, tap a paragraph to read from there.',
     endBook:'End of book', chapter:'Chapter {n}',
     added:'Added {n} book(s)', fontAdded:'Font added: {n}', fontFailed:'Couldn’t load font {n}',
-    failed:'Couldn’t read {f}: {e}', unsupported:'unsupported file type', noText:'no readable text found',
+    failed:'Couldn’t read {f}: {e}', adding:'Adding {i} of {n}…', opening:'Opening {f}…', failedTitle:'Couldn’t add {n} file(s)', noBooksInZip:'no books inside this ZIP', badEpub:'the file is damaged or isn’t a real EPUB', badZip:'the ZIP file is damaged', unsupported:'unsupported file type', noText:'no readable text found',
     notStarted:'Not started', pct:'{p}% read', finished:'Finished',
     fSeries:'Series', fSeriesNo:'Number', allBooks:'All books', nBooks:'{n} books',
     seriesDone:'{d} of {n} finished', nextInSeries:'Next in series: {t}', inSeries:'{s} #{n}',
@@ -368,7 +378,7 @@ const I18N = {
   vi: {
     brand:'Tủ sách', search:'Tìm sách', addBooks:'Thêm sách',
     emptyTitle:'Tủ sách còn trống',
-    emptyBody:'Thêm tệp EPUB, TXT, Markdown hoặc HTML. Sách chỉ được lưu trên thiết bị này.',
+    emptyBody:'Thêm tệp EPUB, TXT, Markdown, HTML hoặc một tệp ZIP chứa nhiều sách. Sách chỉ được lưu trên thiết bị này.',
     noMatch:'Không có sách nào khớp với “{q}”.', count:'{n} cuốn sách trên thiết bị này',
     sortBy:'Sắp xếp theo', sRecent:'Gần đây', sAdded:'Ngày thêm', sTitle:'Tên sách', sAuthor:'Tác giả', sProgress:'Tiến độ',
     edit:'Sửa', more:'Thông tin “{t}”', editTitle:'Thông tin sách', fTitle:'Tên sách', fAuthor:'Tác giả', fLang:'Ngôn ngữ', fDesc:'Mô tả',
@@ -387,7 +397,7 @@ const I18N = {
     tip:'Chạm mép trái hoặc phải (hoặc vuốt) để lật trang, chạm giữa để mở menu này. Khi đang nghe, chạm vào một đoạn để đọc từ đó.',
     endBook:'Hết sách', chapter:'Chương {n}',
     added:'Đã thêm {n} cuốn sách', fontAdded:'Đã thêm phông: {n}', fontFailed:'Không tải được phông {n}',
-    failed:'Không đọc được {f}: {e}', unsupported:'định dạng không hỗ trợ', noText:'không tìm thấy nội dung',
+    failed:'Không đọc được {f}: {e}', adding:'Đang thêm {i}/{n}…', opening:'Đang mở {f}…', failedTitle:'Không thêm được {n} tệp', noBooksInZip:'không có sách trong tệp ZIP này', badEpub:'tệp bị hỏng hoặc không phải EPUB thật', badZip:'tệp ZIP bị hỏng', unsupported:'định dạng không hỗ trợ', noText:'không tìm thấy nội dung',
     notStarted:'Chưa đọc', pct:'Đã đọc {p}%', finished:'Đã đọc xong',
     fSeries:'Bộ sách', fSeriesNo:'Số tập', allBooks:'Tất cả sách', nBooks:'{n} cuốn',
     seriesDone:'Đã đọc xong {d}/{n}', nextInSeries:'Cuốn tiếp theo: {t}', inSeries:'{s}, tập {n}',
@@ -521,7 +531,7 @@ function joinPath(base, href){
 }
 async function parseEpub(buf){
   if (!window.JSZip) throw new Error('EPUB reader failed to load');
-  const zip = await JSZip.loadAsync(buf);
+  let zip; try { zip = await JSZip.loadAsync(buf); } catch { throw new Error(t('badEpub')); }
   const xml = s => new DOMParser().parseFromString(s, 'application/xml');
   const cont = zip.file('META-INF/container.xml'); if (!cont) throw new Error('not a valid EPUB');
   const opfPath = xml(await cont.async('string')).getElementsByTagName('rootfile')[0].getAttribute('full-path');
@@ -709,11 +719,33 @@ async function makeCover(blob){
     return c.toDataURL('image/jpeg', 0.82);
   } catch { return null; }
 }
-async function addFiles(files){
-  let n = 0;
+const BOOK_EXT = ['epub','txt','md','markdown','html','htm','xhtml'], FONT_EXT = ['ttf','otf','woff','woff2'];
+const extOf = name => (name.split('.').pop() || '').toLowerCase();
+function progress(msg){ const e = $('#toast'); e.textContent = msg; e.hidden = false; clearTimeout(toastTimer); }
+/* A .zip of books is unpacked and each book inside is added */
+async function expandZips(files, failures){
+  const out = [];
   for (const f of files) {
-    const ext = (f.name.split('.').pop() || '').toLowerCase();
-    if (['ttf','otf','woff','woff2'].includes(ext)) { await addFont(f); continue; }
+    if (extOf(f.name) !== 'zip') { out.push(f); continue; }
+    try {
+      if (!window.JSZip) throw new Error('ZIP reader failed to load');
+      progress(t('opening', { f: f.name }));
+      let zip; try { zip = await JSZip.loadAsync(f); } catch { throw new Error(t('badZip')); }
+      const entries = Object.values(zip.files).filter(z => !z.dir && !/(^|\/)(__MACOSX|\.)/.test(z.name) && [...BOOK_EXT, ...FONT_EXT].includes(extOf(z.name)));
+      for (const z of entries) out.push(new File([await z.async('blob')], z.name.split('/').pop()));
+      if (!entries.length) failures.push({ f: f.name, e: t('noBooksInZip') });
+    } catch (e) { failures.push({ f: f.name, e: e.message || String(e) }); }
+  }
+  return out;
+}
+async function addFiles(files){
+  const failures = [];
+  files = await expandZips([...files], failures);
+  let n = 0, i = 0;
+  for (const f of files) {
+    i++; if (files.length > 1) progress(t('adding', { i, n: files.length }));
+    const ext = extOf(f.name);
+    if (FONT_EXT.includes(ext)) { await addFont(f); continue; }
     try {
       const r = await parseFile(f, ext);
       const sample = r.chapters.slice(0, 3).flatMap(c => c.blocks.map(b => b.x)).join(' ');
@@ -730,10 +762,18 @@ async function addFiles(files){
       await idbPut('content', { id, chapters: r.chapters });
       await idbPut('meta', meta);
       n++;
-    } catch (e) { toast(t('failed', { f: f.name, e: e.message || e })); }
+    } catch (e) { failures.push({ f: f.name, e: e.message || String(e) }); }
   }
+  $('#toast').hidden = true;
   if (n) { toast(t('added', { n })); try { navigator.storage?.persist?.(); } catch {} }
+  if (failures.length) showFailures(failures);
   await refreshLibrary();
+}
+function showFailures(list){
+  $('#failTitle').textContent = t('failedTitle', { n: list.length });
+  const ul = $('#failList'); ul.replaceChildren();
+  list.forEach(x => { const li = el('li'); li.append(el('b', null, x.f), el('span', null, x.e)); ul.append(li); });
+  $('#failDlg').showModal();
 }
 
 /* ================= Edit details ================= */
