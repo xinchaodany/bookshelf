@@ -68,6 +68,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn.icon{padding:0;width:46px}
 .ri.big{width:56px;height:56px;margin-bottom:12px}
 .searchwrap{position:relative;margin-top:12px}
+.searchrow{display:flex;gap:8px;margin-top:12px}
+.searchrow .searchwrap{flex:1;min-width:0;margin-top:0}
+.sortwrap{flex:none}
+.sortwrap select{min-height:46px;border:2px solid var(--ink);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 10px 0 12px;font-size:15px;font-weight:600;max-width:150px}
 .searchwrap .ri,.selwrap .ri{position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;width:22px;height:22px}
 .searchwrap .ri{left:13px}
 .selwrap{position:relative;display:block}
@@ -203,7 +207,16 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       </div>
       <button class="btn primary icon" id="addBtn" type="button" data-ia="addBooks"><i data-ic="add-line"></i></button>
     </div>
-    <div class="searchwrap"><i data-ic="search-line"></i><input class="search" id="search" type="search" data-ip="search" data-ia="search" autocomplete="off"></div>
+    <div class="searchrow">
+      <div class="searchwrap"><i data-ic="search-line"></i><input class="search" id="search" type="search" data-ip="search" data-ia="search" autocomplete="off"></div>
+      <span class="selwrap sortwrap"><select id="sortSel" data-ia="sortBy">
+        <option value="recent" data-i="sRecent"></option>
+        <option value="added" data-i="sAdded"></option>
+        <option value="title" data-i="sTitle"></option>
+        <option value="author" data-i="sAuthor"></option>
+        <option value="progress" data-i="sProgress"></option>
+      </select><i data-ic="arrow-down-s-line"></i></span>
+    </div>
   </header>
   <div class="shead" id="seriesHead" hidden>
     <button class="btn plain" type="button" id="seriesBack"><i data-ic="arrow-left-line"></i><span data-i="allBooks"></span></button>
@@ -324,10 +337,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 /* ================= i18n ================= */
 const I18N = {
   en: {
-    brand:'Bookshelf', search:'Search titles, authors, series', addBooks:'Add books',
+    brand:'Bookshelf', search:'Search books', addBooks:'Add books',
     emptyTitle:'Nothing on the shelf yet',
     emptyBody:'Add EPUB, TXT, Markdown or HTML files. They’re saved on this device only.',
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
+    sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
     fTags:'Tags, separated by commas', markRead:'Mark as read', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
@@ -352,10 +366,11 @@ const I18N = {
     noGoogle:'No Google {lang} voice here. On Android, set “Speech Services by Google” as the text-to-speech engine and download its voices.'
   },
   vi: {
-    brand:'Tủ sách', search:'Tìm tên sách, tác giả, bộ sách', addBooks:'Thêm sách',
+    brand:'Tủ sách', search:'Tìm sách', addBooks:'Thêm sách',
     emptyTitle:'Tủ sách còn trống',
     emptyBody:'Thêm tệp EPUB, TXT, Markdown hoặc HTML. Sách chỉ được lưu trên thiết bị này.',
     noMatch:'Không có sách nào khớp với “{q}”.', count:'{n} cuốn sách trên thiết bị này',
+    sortBy:'Sắp xếp theo', sRecent:'Gần đây', sAdded:'Ngày thêm', sTitle:'Tên sách', sAuthor:'Tác giả', sProgress:'Tiến độ',
     edit:'Sửa', more:'Thông tin “{t}”', editTitle:'Thông tin sách', fTitle:'Tên sách', fAuthor:'Tác giả', fLang:'Ngôn ngữ', fDesc:'Mô tả',
     fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
     save:'Lưu', cancel:'Hủy', del:'Gỡ khỏi thư viện', delConfirm:'Chạm lần nữa để gỡ', saved:'Đã lưu thông tin', deleted:'Đã gỡ khỏi thư viện. Tệp gốc của bạn vẫn còn nguyên.',
@@ -599,10 +614,21 @@ const skey = b => fold(b.series || '').trim();
 const byNo = (a, b) => (a.seriesNo ?? 1e9) - (b.seriesNo ?? 1e9) || a.title.localeCompare(b.title, undefined, { numeric: true });
 let openSeries = null;
 function seriesBooks(key){ return books.filter(b => skey(b) === key).sort(byNo); }
+let sortBy = store.get('sort', 'recent');
+function sortBooks(arr){
+  const c = new Intl.Collator(uiLang === 'vi' ? 'vi' : 'en', { numeric: true, sensitivity: 'base' });
+  const name = b => (b.series && seriesBooks(skey(b)).length > 1) ? b.series : b.title;
+  const s = [...arr];
+  if (sortBy === 'added') s.sort((a, b) => b.addedAt - a.addedAt);
+  else if (sortBy === 'title') s.sort((a, b) => c.compare(name(a), name(b)) || byNo(a, b));
+  else if (sortBy === 'author') s.sort((a, b) => (!a.author - !b.author) || c.compare(a.author || '', b.author || '') || c.compare(name(a), name(b)) || byNo(a, b));
+  else if (sortBy === 'progress') s.sort((a, b) => (b.progress?.pct || 0) - (a.progress?.pct || 0));
+  return s;
+}
 function renderLibrary(){
   const shelf = $('#shelf'); shelf.replaceChildren();
   const raw = $('#search').value.trim(), q = fold(raw);
-  let list = q ? books.filter(b => fold([b.title, b.author, b.series, (b.tags||[]).join(' ')].join(' ')).includes(q)) : books;
+  let list = sortBooks(q ? books.filter(b => fold([b.title, b.author, b.series, (b.tags||[]).join(' ')].join(' ')).includes(q)) : books);
   if (openSeries && !seriesBooks(openSeries).length) openSeries = null;
   $('#seriesHead').hidden = !openSeries;
   $('#empty').hidden = books.length > 0;
@@ -1196,6 +1222,8 @@ if (synth) synth.addEventListener?.('voiceschanged', () => { if (cur) updateVoic
 $('#addBtn').onclick = $('#addBtn2').onclick = () => $('#bookInput').click();
 $('#bookInput').onchange = async e => { const fs = [...e.target.files]; e.target.value = ''; await addFiles(fs); };
 $('#search').oninput = renderLibrary;
+$('#sortSel').value = sortBy;
+$('#sortSel').onchange = e => { sortBy = e.target.value; store.set('sort', sortBy); renderLibrary(); scrollTo(0, 0); };
 $('#seriesBack').onclick = () => { openSeries = null; renderLibrary(); scrollTo(0, 0); };
 document.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { uiLang = b.dataset.ui; store.set('ui', uiLang); applyI18n(); });
 addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
