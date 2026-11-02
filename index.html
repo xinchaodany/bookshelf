@@ -145,6 +145,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .rbar{background:var(--rbg);border-bottom:2px solid var(--rink);padding:calc(8px + env(safe-area-inset-top,0px)) 8px 10px}
 .rbar-row{display:flex;align-items:center;gap:6px}
 .rbar-row .grow{flex:1}
+.sys{text-align:center;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:pre}
 .rtitle{padding:6px 8px 0}
 .rtitle b{display:block;font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rtitle span{display:block;font-size:13.5px;color:var(--rmuted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -232,10 +233,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <header class="rbar">
       <div class="rbar-row">
         <button class="btn plain" id="backBtn" type="button"><i data-ic="arrow-left-line"></i><span data-i="library"></span></button>
-        <span class="grow"></span>
+        <span class="grow sys" id="sysInfo"></span>
         <button class="btn icon" id="tocBtn" type="button" data-ia="chapters"><i data-ic="list-unordered"></i></button>
         <button class="btn icon" id="setBtn" type="button" data-ia="settings"><i data-ic="font-size"></i></button>
-        <button class="btn icon" id="fsBtn" type="button"><i data-ic="fullscreen-line"></i></button>
       </div>
       <div class="rtitle"><b id="rTitle"></b><span id="rChap"></span></div>
     </header>
@@ -942,11 +942,18 @@ function saveProgress(now){
 function showChrome(on){
   if (!on && !$('#chrome').hidden && $('#ttsNote').textContent === t('tip')) store.set('tipSeen', true);
   $('#chrome').hidden = !on;
-  if (prefs.fs && cur) setFS(!on, true);
-  if (on) { updateChapLabel(); updateTTSBar(); updateFSBtn(); }
+  if (cur && canFS && !fsInstalled()) setFS(!on, true);
+  if (on) { updateChapLabel(); updateTTSBar(); updateSys(); }
+}
+/* In the installed full-screen app the system bar stays hidden, so the menu shows the time and battery instead */
+async function updateSys(){
+  const s = $('#sysInfo'); if (!fsInstalled()) { s.textContent = ''; return; }
+  let txt = new Date().toLocaleTimeString(uiLang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+  try { if (navigator.getBattery) { const b = await navigator.getBattery(); txt += '   ' + Math.round(b.level * 100) + '%' + (b.charging ? ' ↯' : ''); } } catch {}
+  s.textContent = txt;
 }
 /* Full screen: hides the browser bar and Android status/navigation bars */
-const fsInstalled = () => matchMedia('(display-mode: fullscreen)').matches;
+const fsInstalled = () => matchMedia('(display-mode: fullscreen)').matches && !document.fullscreenElement;
 const canFS = !!document.documentElement.requestFullscreen && document.fullscreenEnabled !== false;
 async function setFS(on, quiet){
   try {
@@ -954,16 +961,7 @@ async function setFS(on, quiet){
     else if (!on && document.fullscreenElement) await document.exitFullscreen();
   } catch { if (!quiet) toast(t('fsFailed')); }
 }
-function updateFSBtn(){
-  const b = $('#fsBtn'), on = !!prefs.fs;
-  b.hidden = !canFS;
-  b.replaceChildren(icon(on ? 'fullscreen-exit-line' : 'fullscreen-line'));
-  b.setAttribute('aria-label', t(on ? 'exitFullscreen' : 'fullscreen'));
-  b.setAttribute('aria-pressed', on);
-}
-document.addEventListener('fullscreenchange', () => { updateFSBtn(); if (cur) relayout(); });
-$('#fsBtn').onclick = () => { prefs.fs = !prefs.fs; savePrefs(); updateFSBtn(); if (!prefs.fs) setFS(false, true); showChrome(false);
-}
+document.addEventListener('fullscreenchange', () => { if (cur) relayout(); });
 
 /* taps, swipes, keys */
 let swipeStart = null, swiped = false;
