@@ -955,6 +955,7 @@ async function openBook(id){
   meta.openedAt = Date.now(); idbPut('meta', meta).catch(() => {});
   $('#libraryView').hidden = true; $('#readerView').hidden = false; document.body.dataset.view = 'reader';
   showChrome(false);
+  if (canFS && !fsInstalled()) setFS(true, true);
   $('#rTitle').textContent = meta.title;
   tts.para = null;
   renderChapter(Math.min(meta.progress?.ch || 0, cur.chapters.length - 1), meta.progress?.p || 0);
@@ -1055,12 +1056,11 @@ function saveProgress(now){
 function showChrome(on){
   if (!on && !$('#chrome').hidden && $('#ttsNote').textContent === t('tip')) store.set('tipSeen', true);
   $('#chrome').hidden = !on;
-  if (cur && canFS && !fsInstalled()) setFS(!on, true);
   if (on) { updateChapLabel(); updateTTSBar(); updateSys(); }
 }
 /* In the installed full-screen app the system bar stays hidden, so the menu shows the time and battery instead */
 async function updateSys(){
-  const s = $('#sysInfo'); if (!fsInstalled()) { s.textContent = ''; return; }
+  const s = $('#sysInfo'); if (!fsInstalled() && !document.fullscreenElement) { s.textContent = ''; return; }
   let txt = new Date().toLocaleTimeString(uiLang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   try { if (navigator.getBattery) { const b = await navigator.getBattery(); txt += '   ' + Math.round(b.level * 100) + '%' + (b.charging ? ' ↯' : ''); } } catch {}
   s.textContent = txt;
