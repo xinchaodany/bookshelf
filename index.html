@@ -179,6 +179,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .field input,.field select,.field textarea{font-size:16px;font-weight:400;color:var(--ink);background:var(--bg);border:2px solid var(--ink);border-radius:8px;padding:10px 12px;width:100%;min-height:46px}
 .field textarea{min-height:90px;resize:vertical}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two.series2{grid-template-columns:1fr 84px;gap:8px}
 @media (max-width:400px){.two.wrap{grid-template-columns:1fr}}
 .filemeta{font-size:13px;color:var(--muted);margin:0}
 .preview{border:2px solid var(--ink);border-radius:8px;padding:12px 14px;font-size:20px;line-height:1.45}
@@ -191,6 +192,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .faillist li{display:grid;gap:2px;font-size:14px;border-bottom:1px solid var(--soft);padding-bottom:8px}
 .faillist b{overflow-wrap:anywhere}
 .faillist span{color:var(--muted)}
+.dupbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 16px 0;padding:8px 8px 8px 14px;border:2px solid var(--ink);border-radius:8px;font-size:14px;font-weight:600}
+.dupbar .btn{min-height:40px;padding:0 12px}
 .toc{list-style:none;margin:0;padding:0 0 calc(12px + env(safe-area-inset-bottom,0px))}
 .toc li{border-bottom:1px solid var(--soft)}
 .toc button{all:unset;box-sizing:border-box;display:block;width:100%;padding:13px 18px;cursor:pointer;font-size:16px;line-height:1.35}
@@ -227,6 +230,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <h2 id="seriesTitle"></h2><p id="seriesCount"></p>
   </div>
   <p class="count" id="count"></p>
+  <div class="dupbar" id="dupBar" hidden><span id="dupText"></span><button class="btn" type="button" id="dupBtn"><i data-ic="delete-bin-line"></i><span data-i="dupRemove"></span></button></div>
   <ul class="list" id="shelf"></ul>
   <div class="empty" id="empty" hidden>
     <i data-ic="book-open-line" class="big"></i>
@@ -276,11 +280,13 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       <p class="filemeta" id="fileMeta"></p>
       <label class="field"><span data-i="fTitle"></span><input name="title" required></label>
       <label class="field"><span data-i="fAuthor"></span><input name="author"></label>
-      <div class="two">
-        <label class="field"><span data-i="fSeries"></span><input name="series" list="seriesList" autocomplete="off"></label>
-        <label class="field"><span data-i="fSeriesNo"></span><input name="seriesNo" type="number" min="0" step="0.5" inputmode="decimal"></label>
+      <div class="field"><span data-i="fSeries"></span>
+        <div class="two series2">
+          <span class="selwrap"><select id="seriesSel" data-ia="fSeries"></select><i data-ic="arrow-down-s-line"></i></span>
+          <input name="seriesNo" type="number" min="0" step="0.5" inputmode="decimal" placeholder="#" data-ia="fSeriesNo">
+        </div>
+        <input name="series" autocomplete="off" data-ip="seriesName" data-ia="seriesName" hidden>
       </div>
-      <datalist id="seriesList"></datalist>
       <label class="field"><span data-i="fLang"></span>
         <span class="selwrap"><select name="lang">
           <option value="en" data-i="langEn"></option>
@@ -353,7 +359,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as read', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as read', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -368,7 +374,7 @@ const I18N = {
     tip:'Tap the left or right edge (or swipe) to turn pages, the middle for this menu. While listening, tap a paragraph to read from there.',
     endBook:'End of book', chapter:'Chapter {n}',
     added:'Added {n} book(s)', fontAdded:'Font added: {n}', fontFailed:'Couldn’t load font {n}',
-    failed:'Couldn’t read {f}: {e}', adding:'Adding {i} of {n}…', opening:'Opening {f}…', failedTitle:'Couldn’t add {n} file(s)', noBooksInZip:'no books inside this ZIP', badEpub:'the file is damaged or isn’t a real EPUB', badZip:'the ZIP file is damaged', unsupported:'unsupported file type', noText:'no readable text found',
+    failed:'Couldn’t read {f}: {e}', addedSkipped:'Added {n} book(s). Skipped {s} already in your library.', skipped:'Skipped {s} book(s) already in your library.', dupFound:'{n} duplicate copies', dupRemove:'Remove', dupRemoved:'Removed {n} duplicate copies. Reading progress was kept.', adding:'Adding {i} of {n}…', opening:'Opening {f}…', failedTitle:'Couldn’t add {n} file(s)', noBooksInZip:'no books inside this ZIP', badEpub:'the file is damaged or isn’t a real EPUB', badZip:'the ZIP file is damaged', unsupported:'unsupported file type', noText:'no readable text found',
     notStarted:'Not started', pct:'{p}% read', finished:'Finished',
     fSeries:'Series', fSeriesNo:'Number', allBooks:'All books', nBooks:'{n} books',
     seriesDone:'{d} of {n} finished', nextInSeries:'Next in series: {t}', inSeries:'{s} #{n}',
@@ -382,7 +388,7 @@ const I18N = {
     noMatch:'Không có sách nào khớp với “{q}”.', count:'{n} cuốn sách trên thiết bị này',
     sortBy:'Sắp xếp theo', sRecent:'Gần đây', sAdded:'Ngày thêm', sTitle:'Tên sách', sAuthor:'Tác giả', sProgress:'Tiến độ',
     edit:'Sửa', more:'Thông tin “{t}”', editTitle:'Thông tin sách', fTitle:'Tên sách', fAuthor:'Tác giả', fLang:'Ngôn ngữ', fDesc:'Mô tả',
-    fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
+    fTags:'Thẻ, cách nhau bằng dấu phẩy', markRead:'Đánh dấu đã đọc', noSeries:'Không thuộc bộ nào', newSeries:'Bộ sách mới…', seriesName:'Tên bộ sách mới', fullscreen:'Toàn màn hình', exitFullscreen:'Thoát toàn màn hình', fsFailed:'Không bật được toàn màn hình ở đây. Hãy mở ứng dụng đã cài.', cover:'Ảnh bìa', changeCover:'Chọn ảnh', removeCover:'Gỡ ảnh bìa', coverFailed:'Không mở được ảnh này', fileInfo:'Tệp: {f} ({s}), thêm ngày {d}',
     save:'Lưu', cancel:'Hủy', del:'Gỡ khỏi thư viện', delConfirm:'Chạm lần nữa để gỡ', saved:'Đã lưu thông tin', deleted:'Đã gỡ khỏi thư viện. Tệp gốc của bạn vẫn còn nguyên.',
     langEn:'Tiếng Anh', langVi:'Tiếng Việt', langOther:'Khác',
     library:'Thư viện', chapters:'Mục lục', settings:'Cài đặt đọc', close:'Đóng', menu:'Menu',
@@ -397,7 +403,7 @@ const I18N = {
     tip:'Chạm mép trái hoặc phải (hoặc vuốt) để lật trang, chạm giữa để mở menu này. Khi đang nghe, chạm vào một đoạn để đọc từ đó.',
     endBook:'Hết sách', chapter:'Chương {n}',
     added:'Đã thêm {n} cuốn sách', fontAdded:'Đã thêm phông: {n}', fontFailed:'Không tải được phông {n}',
-    failed:'Không đọc được {f}: {e}', adding:'Đang thêm {i}/{n}…', opening:'Đang mở {f}…', failedTitle:'Không thêm được {n} tệp', noBooksInZip:'không có sách trong tệp ZIP này', badEpub:'tệp bị hỏng hoặc không phải EPUB thật', badZip:'tệp ZIP bị hỏng', unsupported:'định dạng không hỗ trợ', noText:'không tìm thấy nội dung',
+    failed:'Không đọc được {f}: {e}', addedSkipped:'Đã thêm {n} cuốn. Bỏ qua {s} cuốn đã có trong thư viện.', skipped:'Bỏ qua {s} cuốn đã có trong thư viện.', dupFound:'{n} bản sách trùng', dupRemove:'Gỡ', dupRemoved:'Đã gỡ {n} bản trùng. Tiến độ đọc vẫn được giữ.', adding:'Đang thêm {i}/{n}…', opening:'Đang mở {f}…', failedTitle:'Không thêm được {n} tệp', noBooksInZip:'không có sách trong tệp ZIP này', badEpub:'tệp bị hỏng hoặc không phải EPUB thật', badZip:'tệp ZIP bị hỏng', unsupported:'định dạng không hỗ trợ', noText:'không tìm thấy nội dung',
     notStarted:'Chưa đọc', pct:'Đã đọc {p}%', finished:'Đã đọc xong',
     fSeries:'Bộ sách', fSeriesNo:'Số tập', allBooks:'Tất cả sách', nBooks:'{n} cuốn',
     seriesDone:'Đã đọc xong {d}/{n}', nextInSeries:'Cuốn tiếp theo: {t}', inSeries:'{s}, tập {n}',
@@ -635,6 +641,18 @@ function sortBooks(arr){
   else if (sortBy === 'progress') s.sort((a, b) => (b.progress?.pct || 0) - (a.progress?.pct || 0));
   return s;
 }
+/* Duplicates: the same file (name + size) added more than once */
+const dupKey = b => (b.fileName || '') + '|' + (b.size || 0);
+function dupGroups(){
+  const m = new Map();
+  books.forEach(b => { const k = dupKey(b); m.set(k, [...(m.get(k) || []), b]); });
+  return [...m.values()].filter(g => g.length > 1);
+}
+function updateDupBar(){
+  const extra = dupGroups().reduce((s, g) => s + g.length - 1, 0);
+  $('#dupBar').hidden = !extra || !!openSeries;
+  $('#dupText').textContent = t('dupFound', { n: extra });
+}
 function renderLibrary(){
   const shelf = $('#shelf'); shelf.replaceChildren();
   const raw = $('#search').value.trim(), q = fold(raw);
@@ -644,6 +662,7 @@ function renderLibrary(){
   $('#empty').hidden = books.length > 0;
   $('#count').hidden = !books.length || !!openSeries;
   $('#count').textContent = t('count', { n: books.length });
+  updateDupBar();
   if (openSeries) {
     const sb = seriesBooks(openSeries);
     $('#seriesTitle').textContent = sb[0].series;
@@ -741,11 +760,14 @@ async function expandZips(files, failures){
 async function addFiles(files){
   const failures = [];
   files = await expandZips([...files], failures);
-  let n = 0, i = 0;
+  let n = 0, i = 0, skipped = 0;
+  const have = new Set(books.map(dupKey));
   for (const f of files) {
     i++; if (files.length > 1) progress(t('adding', { i, n: files.length }));
     const ext = extOf(f.name);
     if (FONT_EXT.includes(ext)) { await addFont(f); continue; }
+    const key = f.name + '|' + f.size;
+    if (have.has(key)) { skipped++; continue; }
     try {
       const r = await parseFile(f, ext);
       const sample = r.chapters.slice(0, 3).flatMap(c => c.blocks.map(b => b.x)).join(' ');
@@ -761,11 +783,12 @@ async function addFiles(files){
       };
       await idbPut('content', { id, chapters: r.chapters });
       await idbPut('meta', meta);
-      n++;
+      n++; have.add(key);
     } catch (e) { failures.push({ f: f.name, e: e.message || String(e) }); }
   }
   $('#toast').hidden = true;
-  if (n) { toast(t('added', { n })); try { navigator.storage?.persist?.(); } catch {} }
+  if (n || skipped) toast(skipped ? (n ? t('addedSkipped', { n, s: skipped }) : t('skipped', { s: skipped })) : t('added', { n }));
+  if (n) { try { navigator.storage?.persist?.(); } catch {} }
   if (failures.length) showFailures(failures);
   await refreshLibrary();
 }
@@ -785,8 +808,7 @@ async function openEdit(id){
   f.title.value = b.title; f.author.value = b.author || ''; f.lang.value = b.lang || 'other';
   $('#readBtn').setAttribute('aria-pressed', (b.progress?.pct || 0) >= 99);
   f.series.value = b.series || ''; f.seriesNo.value = b.seriesNo ?? '';
-  const dl = $('#seriesList'); dl.replaceChildren();
-  [...new Set(books.map(x => x.series).filter(Boolean))].forEach(s => { const o = document.createElement('option'); o.value = s; dl.append(o); });
+  fillSeriesSel(b.series || '');
   $('#fileMeta').textContent = t('fileInfo', { f: b.fileName, s: fmtSize(b.size || 0), d: new Date(b.addedAt).toLocaleDateString(uiLang === 'vi' ? 'vi-VN' : 'en-US') });
   disarmDelete();
   $('#editDlg').showModal();
@@ -800,6 +822,31 @@ $('#delBtn').onclick = async () => {
 };
 $('#editCancel').onclick = () => $('#editDlg').close();
 $('#readBtn').onclick = e => { const b = e.currentTarget; b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); };
+/* Series picker: existing series, none, or a new name */
+function fillSeriesSel(current){
+  const sel = $('#seriesSel'); sel.replaceChildren();
+  const c = new Intl.Collator(uiLang === 'vi' ? 'vi' : 'en', { numeric: true, sensitivity: 'base' });
+  const names = [], seen = new Set();
+  books.forEach(x => { const k = skey(x); if (x.series && !seen.has(k)) { seen.add(k); names.push(x.series); } });
+  names.sort(c.compare);
+  const add = (v, txt) => { const o = el('option', null, txt); o.value = v; sel.append(o); };
+  add('', t('noSeries')); names.forEach(n => add(n, n)); add('__new', t('newSeries'));
+  const match = names.find(n => fold(n).trim() === fold(current).trim());
+  sel.value = current ? (match || '__new') : '';
+  syncSeries(false);
+}
+function syncSeries(userChange){
+  const f = $('#editForm'), v = $('#seriesSel').value, isNew = v === '__new';
+  f.series.hidden = !isNew;
+  f.seriesNo.disabled = !v;
+  if (!isNew) f.series.value = v;
+  else if (userChange) { f.series.value = ''; f.series.focus(); }
+  if (userChange && v && !isNew && !f.seriesNo.value) {
+    const nums = books.filter(x => x.id !== editingId && skey(x) === fold(v).trim() && x.seriesNo != null).map(x => x.seriesNo);
+    f.seriesNo.value = nums.length ? Math.floor(Math.max(...nums)) + 1 : 1;
+  }
+}
+$('#seriesSel').onchange = () => syncSeries(true);
 $('#editForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target; const b = await idbGet('meta', editingId); if (!b) return;
@@ -1264,6 +1311,14 @@ $('#bookInput').onchange = async e => { const fs = [...e.target.files]; e.target
 $('#search').oninput = renderLibrary;
 $('#sortSel').value = sortBy;
 $('#sortSel').onchange = e => { sortBy = e.target.value; store.set('sort', sortBy); renderLibrary(); scrollTo(0, 0); };
+$('#dupBtn').onclick = async () => {
+  let n = 0;
+  for (const g of dupGroups()) {
+    g.sort((a, b) => (b.progress?.pct || 0) - (a.progress?.pct || 0) || (b.openedAt || 0) - (a.openedAt || 0) || a.addedAt - b.addedAt);
+    for (const d of g.slice(1)) { await idbDel('meta', d.id); await idbDel('content', d.id); n++; }
+  }
+  toast(t('dupRemoved', { n })); refreshLibrary();
+};
 $('#seriesBack').onclick = () => { openSeries = null; renderLibrary(); scrollTo(0, 0); };
 document.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { uiLang = b.dataset.ui; store.set('ui', uiLang); applyI18n(); });
 addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
