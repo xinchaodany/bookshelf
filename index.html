@@ -140,7 +140,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .status button .ri{width:22px;height:22px}
 .status button:focus-visible{outline:3px solid var(--rink);outline-offset:-3px}
 /* Low-contrast bottom bar so it doesn't compete with the text */
-.status{color:color-mix(in srgb,var(--rink) 30%,var(--rbg));border-top-color:color-mix(in srgb,var(--rink) 20%,var(--rbg));padding-left:14px}
+.status{color:color-mix(in srgb,var(--rink) 30%,var(--rbg));border-top-color:color-mix(in srgb,var(--rink) 20%,var(--rbg));padding-left:24px;padding-right:14px}
 .status .sc{flex:1;min-width:0;display:flex;white-space:nowrap}
 .status .st{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .status .sch{flex:none;white-space:pre;padding-right:12px}
@@ -153,7 +153,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .rbar{background:var(--rbg);border-bottom:2px solid var(--rink);padding:calc(8px + env(safe-area-inset-top,0px)) 8px 10px}
 .rbar-row{display:flex;align-items:center;gap:6px}
 .rbar-row .grow{flex:1}
-.sys{text-align:center;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:pre}
+.sys{text-align:right;padding-right:8px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:pre}
+.rtitle-row{display:flex;align-items:center;gap:2px}
+.rtitle-row .rtitle{flex:1;min-width:0;padding:4px 8px 0 0}
 .rtitle{padding:6px 8px 0}
 .rtitle b{display:block;font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rtitle span{display:block;font-size:13.5px;color:var(--rmuted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -259,10 +261,13 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <header class="rbar">
       <div class="rbar-row">
         <button class="btn plain" id="backBtn" type="button"><i data-ic="arrow-left-line"></i><span data-i="library"></span></button>
-        <span class="grow sys" id="sysInfo"></span>
-        <button class="btn icon" id="tocBtn" type="button" data-ia="chapters"><i data-ic="list-unordered"></i></button>
+        <span class="grow"></span>
+        <span class="sys" id="sysInfo"></span>
       </div>
-      <div class="rtitle"><b id="rTitle"></b><span id="rChap"></span></div>
+      <div class="rtitle-row">
+        <button class="btn icon plain" id="tocBtn" type="button" data-ia="chapters"><i data-ic="list-unordered"></i></button>
+        <div class="rtitle"><b id="rTitle"></b><span id="rChap"></span></div>
+      </div>
     </header>
     <div class="scrim" id="scrim"></div>
     <!-- Read-aloud is switched off for now: remove "hidden" here, on #miniPlay and on the two settings rows to bring it back -->
