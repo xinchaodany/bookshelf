@@ -1,7 +1,8 @@
 {
+  "id": "?app=fullscreen",
   "name": "Bookshelf · Tủ sách",
   "short_name": "Tủ sách",
-  "start_url": "./",
+  "start_url": "./?app=fullscreen",
   "scope": "./",
   "display": "fullscreen",
   "display_override": [
