@@ -875,9 +875,11 @@ const BUILTIN = [
 ];
 const LIM = { size:[14, 34, 1], lh:[1.2, 2.2, 0.1], mx:[8, 48, 4], rate:[0.5, 2.5, 0.1], uiScale:[60, 120, 10] };
 let userFonts = [];
-let prefs = Object.assign({ font:'Literata', size:20, lh:1.6, mx:22, bold:false, rt:'auto', rate:1, bg:true, fs:false, uiScale:100 }, store.get('prefs', {}));
+let prefs = Object.assign({ font:'Literata', size:20, lh:1.6, mx:22, bold:false, rt:'auto', rate:1, bg:true, fs:false, uiScale:80 }, store.get('prefs', {}));
 if (prefs.rt === 'sepia') prefs.rt = 'paper';
 if (prefs.rt === 'night') prefs.rt = 'invert';
+/* One-time switch to the new 80% default app size (can still be changed in Aa > App size) */
+if (!store.get('scale80', false)) { prefs.uiScale = 80; store.set('scale80', true); store.set('prefs', prefs); }
 function savePrefs(){ store.set('prefs', prefs); }
 /* App size: makes the phone lay out a wider page, so everything (menus, buttons and text) draws smaller */
 function applyScale(){
@@ -1032,6 +1034,54 @@ function layout(anchor){
   let n = 0;
   if (anchor === 'end') n = pageCount - 1; else if (anchor > 0) n = pageOfPara(anchor);
   goPage(n);
+  ensurePageCounts();
+}
+/* Whole-book page numbers: every chapter is laid out once, out of sight, with the same
+   screen size and reading settings; the result is saved so it's instant next time. */
+let measureToken = 0, fontGen = 0;
+const chapChars = c => c.chars ??= c.blocks.reduce((s, b) => s + b.x.length, 0);
+function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, fontGen].join('|'); }
+function ensurePageCounts(){
+  if (!cur) return;
+  const sig = layoutSig();
+  if (cur.pageSig === sig) return;
+  cur.pageSig = sig;
+  const id = cur.meta.id, saved = store.get('pages-' + id, null);
+  if (saved && saved.sig === sig && saved.counts.length === cur.chapters.length) { cur.pageCounts = saved.counts; updateStatus(); return; }
+  cur.pageCounts = new Array(cur.chapters.length).fill(null);
+  const my = ++measureToken;
+  const box = el('div', 'vp'); box.setAttribute('aria-hidden', 'true');
+  box.style.cssText = 'visibility:hidden;pointer-events:none;z-index:-1';
+  const mp = el('article', 'page'); mp.style.cssText = pg.style.cssText; mp.style.transform = 'none';
+  box.append(mp); document.body.append(box);
+  let i = 0;
+  const step = () => {
+    if (my !== measureToken || !cur || cur.meta.id !== id) { box.remove(); return; }
+    const t0 = performance.now();
+    while (i < cur.chapters.length && performance.now() - t0 < 40) {
+      mp.replaceChildren();
+      cur.chapters[i].blocks.forEach(b => mp.append(el(b.k === 'h' ? 'h2' : 'p', null, b.x)));
+      if (i === cur.chapters.length - 1) { const end = el('div', 'endnote'); end.append(el('p', null, t('endBook'))); mp.append(end); }
+      const last = mp.lastElementChild, rs = last ? last.getClientRects() : [];
+      cur.pageCounts[i] = rs.length ? pageOfRect(rs[rs.length - 1], mp.getBoundingClientRect().left) + 1 : 1;
+      i++;
+    }
+    updateStatus();
+    if (i < cur.chapters.length) setTimeout(step, 30);
+    else { box.remove(); store.set('pages-' + id, { sig, counts: cur.pageCounts }); }
+  };
+  setTimeout(step, 60);
+}
+function bookPages(){
+  const counts = cur.pageCounts || [], perPage = Math.max(1, chapChars(cur.chapters[cur.ch]) / pageCount);
+  let before = 0, total = 0, exact = true;
+  cur.chapters.forEach((c, i) => {
+    let n = i === cur.ch ? pageCount : counts[i];
+    if (n == null) { exact = false; n = Math.max(1, Math.round(chapChars(c) / perPage)); }
+    if (i < cur.ch) before += n;
+    total += n;
+  });
+  return { page: before + curPage + 1, total, exact };
 }
 let relayoutTimer;
 function relayout(){
@@ -1046,12 +1096,15 @@ function goPage(n){
 }
 function bookPct(){
   const atEnd = cur.ch === cur.chapters.length - 1 && curPage === pageCount - 1;
-  return atEnd ? 100 : ((cur.ch + curPage / pageCount) / cur.chapters.length) * 100;
+  if (atEnd) return 100;
+  const bp = bookPages();
+  return (bp.page - 1) / bp.total * 100;
 }
 function updateStatus(){
   if (!cur) return;
   $('#stChap').textContent = chapTitle(cur.ch);
-  $('#stPage').textContent = (curPage + 1) + ' / ' + pageCount + '    ' + Math.floor(bookPct()) + '%';
+  const bp = bookPages();
+  $('#stPage').textContent = (bp.exact ? '' : '~') + bp.page + ' / ' + bp.total + ' · ' + Math.floor(bookPct()) + '%';
 }
 function turn(dir){
   if (dir > 0) {
@@ -1153,7 +1206,7 @@ addEventListener('keydown', e => {
   else if (k === 'Escape') showChrome($('#chrome').hidden);
 });
 if ('ResizeObserver' in window) new ResizeObserver(() => { if (cur) relayout(); }).observe(vp);
-document.fonts?.addEventListener?.('loadingdone', () => { if (cur) relayout(); });
+document.fonts?.addEventListener?.('loadingdone', () => { fontGen++; if (cur) relayout(); });
 
 /* ================= Read aloud ================= */
 const synth = window.speechSynthesis;
