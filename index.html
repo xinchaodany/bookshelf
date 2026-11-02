@@ -373,7 +373,7 @@ const I18N = {
     fontHint:'Check that Vietnamese marks display correctly before choosing a font.',
     listen:'Listen', resume:'Resume', pause:'Pause', stop:'Stop', voice:'Voice', speed:'Speed', defVoice:'Default voice',
     noVoice:'This device has no {lang} voice. Add one in your system’s text-to-speech settings.',
-    noTTS:'Read-aloud isn’t supported in this browser.', ttsError:'Read-aloud stopped: the voice couldn’t play.',
+    noTTS:'Read-aloud isn’t supported in this browser.', ttsError:'Read-aloud stopped: the voice couldn’t play ({code}). If you’re offline, make sure the voice is downloaded in Android’s text-to-speech settings.',
     tip:'Tap the left or right edge (or swipe) to turn pages, the middle for this menu. While listening, tap a paragraph to read from there.',
     endBook:'End of book', chapter:'Chapter {n}',
     added:'Added {n} book(s)', fontAdded:'Font added: {n}', fontFailed:'Couldn’t load font {n}',
@@ -402,7 +402,7 @@ const I18N = {
     fontHint:'Hãy kiểm tra phông hiển thị đúng dấu tiếng Việt trước khi chọn.',
     listen:'Nghe', resume:'Nghe tiếp', pause:'Tạm dừng', stop:'Dừng', voice:'Giọng đọc', speed:'Tốc độ', defVoice:'Giọng mặc định',
     noVoice:'Thiết bị chưa có giọng đọc {lang}. Hãy thêm trong phần cài đặt chuyển văn bản thành giọng nói.',
-    noTTS:'Trình duyệt này không hỗ trợ đọc to.', ttsError:'Đã dừng đọc: giọng đọc không phát được.',
+    noTTS:'Trình duyệt này không hỗ trợ đọc to.', ttsError:'Đã dừng đọc: giọng đọc không phát được ({code}). Nếu đang ngoại tuyến, hãy tải giọng đọc về máy trong cài đặt chuyển văn bản thành giọng nói của Android.',
     tip:'Chạm mép trái hoặc phải (hoặc vuốt) để lật trang, chạm giữa để mở menu này. Khi đang nghe, chạm vào một đoạn để đọc từ đó.',
     endBook:'Hết sách', chapter:'Chương {n}',
     added:'Đã thêm {n} cuốn sách', fontAdded:'Đã thêm phông: {n}', fontFailed:'Không tải được phông {n}',
@@ -1232,13 +1232,13 @@ function ttsPlay(from){
   tts.para = from ?? tts.para ?? cur.anchor;
   tts.next = { ch: cur.ch, para: tts.para }; tts.queued = 0;
   highlight(tts.para);
-  keepAlive(prefs.bg); updateMedia(); updateTTSBar();
+  keepAlive(prefs.bg && !tts.noKeepAlive); updateMedia(); updateTTSBar();
   const my = tts.token;
   setTimeout(() => { if (my === tts.token && tts.on) enqueue(document.hidden ? BIG_BATCH : SMALL_BATCH); }, 80);
 }
 function enqueue(budget){
   if (!cur || !tts.on) return;
-  const my = tts.token, voice = currentVoice(), lang = bookLang();
+  const my = tts.token, voice = tts.forceDefault ? null : currentVoice(), lang = bookLang();
   let used = 0;
   while (used < budget && tts.next) {
     const { ch, para } = tts.next;
@@ -1249,11 +1249,14 @@ function enqueue(budget){
       u.rate = prefs.rate;
       const len = part.s.length;
       u.onstart = () => onUttStart(my, ch, para, part.off);
-      u.onend = () => onUttEnd(my, len);
+      u.onend = () => { tts.fails = 0; onUttEnd(my, len); };
       u.onerror = ev => {
         if (my !== tts.token || ev.error === 'interrupted' || ev.error === 'canceled') return;
-        if (++tts.errors >= 3) { ttsStop(); toast(t('ttsError')); return; }
-        onUttEnd(my, len);
+        /* Fallbacks before giving up: 1) let Android pick its default voice, 2) stop the screen-off keep-alive track */
+        tts.fails = (tts.fails || 0) + 1;
+        if (tts.fails === 1 && !tts.forceDefault) { tts.forceDefault = true; ttsPlay(para); return; }
+        if (tts.fails <= 2 && !tts.noKeepAlive && prefs.bg) { tts.noKeepAlive = true; ttsPlay(para); return; }
+        tts.fails = 0; ttsStop(); toast(t('ttsError', { code: ev.error || 'error' }));
       };
       synth.speak(u);
       tts.queued += len; used += len;
@@ -1323,7 +1326,7 @@ $('#playBtn').onclick = () => { toggleTTS(); if (tts.on) showChrome(false); };
 $('#miniPlay').onclick = toggleTTS;
 $('#stopBtn').onclick = ttsStop;
 $('#bgBtn').onclick = () => { prefs.bg = !prefs.bg; savePrefs(); updateTTSBar(); if (tts.on) keepAlive(prefs.bg); };
-$('#voiceSel').onchange = e => { store.set('voice-' + bookLang(), e.target.value); if (tts.on) ttsPlay(tts.para); };
+$('#voiceSel').onchange = e => { store.set('voice-' + bookLang(), e.target.value); tts.forceDefault = false; tts.fails = 0; if (tts.on) ttsPlay(tts.para); };
 document.querySelectorAll('[data-rate]').forEach(b => b.onclick = () => {
   const [lo, hi, st] = LIM.rate;
   prefs.rate = Math.round(Math.min(hi, Math.max(lo, prefs.rate + st * +b.dataset.rate)) * 10) / 10;
