@@ -1128,7 +1128,8 @@ function firstVisible(){
   return Math.max(0, ps.length - 1);
 }
 function layout(anchor){
-  W = vp.clientWidth || innerWidth;
+  /* exact (fractional) width: rounding it made pages drift sideways on screens like the Palma's */
+  W = vp.getBoundingClientRect().width || innerWidth;
   pg.style.setProperty('--pw', W + 'px');
   pg.style.transform = 'none';
   const last = pg.lastElementChild; const rs = last ? last.getClientRects() : [];
