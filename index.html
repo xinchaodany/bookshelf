@@ -58,6 +58,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [hidden]{display:none !important}
+.noterow{display:flex;align-items:flex-start;gap:8px}
+.noterow > p{flex:1}
+.x{all:unset;box-sizing:border-box;flex:none;width:38px;height:38px;margin:-9px -9px 0 0;display:grid;place-items:center;cursor:pointer}
+.x .ri{width:20px;height:20px}
+.x:focus-visible{outline:3px solid currentColor;outline-offset:-3px}
 .ri{width:1.25em;height:1.25em;flex:none;fill:currentColor;display:inline-block;vertical-align:-.25em}
 .btn .ri{width:22px;height:22px}
 .btn.icon{padding:0;width:46px}
@@ -146,7 +151,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .scrim{flex:1}
 .tts{background:var(--rbg);border-top:2px solid var(--rink);padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));display:grid;gap:12px}
 .tts .row{display:flex;gap:10px;align-items:center}
-.tts .row .play{flex:1}
+.tts .row .play{flex:1;min-width:0}
 .tts select{width:100%;min-height:46px;background:var(--rbg);color:var(--rink);border:2px solid var(--rink);border-radius:8px;padding:0 10px;font-weight:500}
 .note{margin:0;font-size:13px;color:var(--rmuted);line-height:1.4}
 .step{display:inline-flex;align-items:center;border:2px solid currentColor;border-radius:8px;overflow:hidden}
@@ -228,9 +233,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       <div class="rbar-row">
         <button class="btn plain" id="backBtn" type="button"><i data-ic="arrow-left-line"></i><span data-i="library"></span></button>
         <span class="grow"></span>
-        <button class="btn icon" id="fsBtn" type="button"><i data-ic="fullscreen-line"></i></button>
-        <button class="btn" id="tocBtn" type="button"><i data-ic="list-unordered"></i><span data-i="chapters"></span></button>
+        <button class="btn icon" id="tocBtn" type="button" data-ia="chapters"><i data-ic="list-unordered"></i></button>
         <button class="btn icon" id="setBtn" type="button" data-ia="settings"><i data-ic="font-size"></i></button>
+        <button class="btn icon" id="fsBtn" type="button"><i data-ic="fullscreen-line"></i></button>
       </div>
       <div class="rtitle"><b id="rTitle"></b><span id="rChap"></span></div>
     </header>
@@ -238,15 +243,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <div class="tts">
       <div class="row">
         <button class="btn primary play" id="playBtn" type="button"></button>
-        <button class="btn" id="stopBtn" type="button"><i data-ic="stop-fill"></i><span data-i="stop"></span></button>
+        <button class="btn icon" id="stopBtn" type="button" data-ia="stop"><i data-ic="stop-fill"></i></button>
+        <div class="step" role="group" data-ia="speed"><button type="button" data-rate="-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="rateOut"></output><button type="button" data-rate="1" aria-label="+"><i data-ic="add-line"></i></button></div>
       </div>
-      <span class="selwrap"><select id="voiceSel" data-ia="voice"></select><i data-ic="arrow-down-s-line"></i></span>
-      <div class="srow">
-        <span class="slabel" data-i="speed"></span>
-        <div class="step"><button type="button" data-rate="-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="rateOut"></output><button type="button" data-rate="1" aria-label="+"><i data-ic="add-line"></i></button></div>
-      </div>
-      <div class="srow"><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
-      <p class="note" id="ttsNote"></p>
+      <div class="noterow" id="noteRow"><p class="note" id="ttsNote"></p><button class="x" type="button" id="tipX" data-ia="close"><i data-ic="close-line"></i></button></div>
     </div>
   </div>
 </section>
@@ -286,7 +286,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   <div class="db">
     <label class="field"><span data-i="font"></span><span class="selwrap"><select id="fontSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="preview" id="preview">Aa Ăă Ơơ Ưư Đđ. Một ngày đẹp trời. The quick brown fox.</div>
-    <p class="hint" data-i="fontHint"></p>
+    <div class="noterow" id="hintRow"><p class="hint" id="fontHint" data-i="fontHint"></p><button class="x" type="button" id="hintX" data-ia="close"><i data-ic="close-line"></i></button></div>
     <div><button class="btn" type="button" id="fontUpBtn"><i data-ic="upload-2-line"></i><span data-i="addFont"></span></button></div>
     <div id="ufWrap" hidden>
       <p class="slabel" style="margin:0 0 8px" data-i="yourFonts"></p>
@@ -303,6 +303,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       <div class="seg" role="group" id="rtSeg">
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button>
       </div></div>
+    <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
+    <div class="srow"><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
     <div class="srow" style="padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))"><span class="slabel" data-i="uiLangLabel"></span>
       <div class="seg" role="group"><button type="button" data-ui="en">EN</button><button type="button" data-ui="vi">VI</button></div></div>
   </div>
@@ -840,14 +842,13 @@ async function openBook(id){
   meta.openedAt = Date.now(); idbPut('meta', meta).catch(() => {});
   $('#libraryView').hidden = true; $('#readerView').hidden = false; document.body.dataset.view = 'reader';
   showChrome(false);
-  if (prefs.fs) setFS(true, true);
   $('#rTitle').textContent = meta.title;
   tts.para = null;
   renderChapter(Math.min(meta.progress?.ch || 0, cur.chapters.length - 1), meta.progress?.p || 0);
   updateVoices(); updateTTSBar();
 }
 function closeReader(){
-  ttsStop(); saveProgress(true); cur = null; showChrome(false);
+  ttsStop(); saveProgress(true); cur = null; showChrome(false); setFS(false, true);
   $('#readerView').hidden = true; $('#libraryView').hidden = false; document.body.dataset.view = 'library';
   refreshLibrary().then(() => scrollTo(0, libScroll));
 }
@@ -939,7 +940,9 @@ function saveProgress(now){
   if (now) run(); else saveTimer = setTimeout(run, 600);
 }
 function showChrome(on){
+  if (!on && !$('#chrome').hidden && $('#ttsNote').textContent === t('tip')) store.set('tipSeen', true);
   $('#chrome').hidden = !on;
+  if (prefs.fs && cur) setFS(!on, true);
   if (on) { updateChapLabel(); updateTTSBar(); updateFSBtn(); }
 }
 /* Full screen: hides the browser bar and Android status/navigation bars */
@@ -952,14 +955,14 @@ async function setFS(on, quiet){
   } catch { if (!quiet) toast(t('fsFailed')); }
 }
 function updateFSBtn(){
-  const b = $('#fsBtn'), on = !!document.fullscreenElement;
-  b.hidden = !canFS || (fsInstalled() && !on);
+  const b = $('#fsBtn'), on = !!prefs.fs;
+  b.hidden = !canFS;
   b.replaceChildren(icon(on ? 'fullscreen-exit-line' : 'fullscreen-line'));
   b.setAttribute('aria-label', t(on ? 'exitFullscreen' : 'fullscreen'));
   b.setAttribute('aria-pressed', on);
 }
 document.addEventListener('fullscreenchange', () => { updateFSBtn(); if (cur) relayout(); });
-$('#fsBtn').onclick = () => { const on = !document.fullscreenElement; prefs.fs = on; savePrefs(); setFS(on); showChrome(false);
+$('#fsBtn').onclick = () => { prefs.fs = !prefs.fs; savePrefs(); updateFSBtn(); if (!prefs.fs) setFS(false, true); showChrome(false);
 }
 
 /* taps, swipes, keys */
@@ -985,7 +988,10 @@ vp.addEventListener('click', e => {
 $('#scrim').onclick = () => showChrome(false);
 $('#menuBtn').onclick = () => showChrome(true);
 $('#backBtn').onclick = closeReader;
-$('#setBtn').onclick = () => { showChrome(false); $('#setDlg').showModal(); };
+$('#setBtn').onclick = () => { showChrome(false); $('#hintRow').hidden = store.get('hintSeen', false); $('#setDlg').showModal(); };
+$('#setDlg').addEventListener('close', () => store.set('hintSeen', true));
+$('#tipX').onclick = () => { store.set('tipSeen', true); updateTTSBar(); };
+$('#hintX').onclick = () => { store.set('hintSeen', true); $('#hintRow').hidden = true; };
 $('#tocBtn').onclick = () => {
   const ul = $('#tocList'); ul.replaceChildren();
   cur.chapters.forEach((c, i) => {
@@ -1052,7 +1058,8 @@ function updateTTSBar(){
   const langName = t(lang === 'vi' ? 'langVi' : 'langEn');
   const missing = lang !== 'other' && synth.getVoices().length > 0 && voicesFor(lang).length === 0;
   const noG = lang !== 'other' && !missing && synth.getVoices().length > 0 && !voicesFor(lang).some(isGoogle) && !/Android/i.test(navigator.userAgent);
-  $('#ttsNote').textContent = missing ? t('noVoice', { lang: langName }) : noG ? t('noGoogle', { lang: langName }) : t('tip');
+  const note = missing ? t('noVoice', { lang: langName }) : noG ? t('noGoogle', { lang: langName }) : (store.get('tipSeen', false) ? '' : t('tip'));
+  $('#ttsNote').textContent = note; $('#noteRow').hidden = !note; $('#tipX').hidden = note !== t('tip');
 }
 function chunksOf(text){
   const sentences = text.match(/[^.!?…。]+[.!?…。]+["”’»)\]]*\s*|[^.!?…。]+$/g) || [text];
