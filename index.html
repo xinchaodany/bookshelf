@@ -976,7 +976,7 @@ const BUILTIN = [
   { v:'sys-sans', n:'sysSans', css:'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', i:true }
 ];
 const LIM = { size:[14, 34, 1], lh:[1.2, 2.2, 0.1], mx:[8, 48, 4], rate:[0.5, 2.5, 0.1], uiScale:[60, 120, 10] };
-let userFonts = [];
+let userFonts = [], fontsLoaded = false;
 let prefs = Object.assign({ font:'Literata', size:20, lh:1.6, mx:22, bold:false, rt:'auto', rate:1, bg:true, fs:false, uiScale:80 }, store.get('prefs', {}));
 if (prefs.rt === 'sepia') prefs.rt = 'paper';
 if (prefs.rt === 'night') prefs.rt = 'invert';
@@ -1008,6 +1008,7 @@ async function registerFont(f){ const ff = new FontFace('uf-' + f.id, f.data); a
 async function loadFonts(){
   let all = []; try { all = await idbAll('fonts'); } catch {}
   for (const f of all) { try { await registerFont(f); userFonts.push({ id: f.id, name: f.name }); } catch {} }
+  fontsLoaded = true;
   renderFontOptions(); applyPrefs();
 }
 async function addFont(file){
@@ -1028,7 +1029,8 @@ function renderFontOptions(){
     for (const f of userFonts) { const o = el('option', null, f.name); o.value = 'uf:' + f.id; g.append(o); }
     sel.append(g);
   }
-  sel.value = prefs.font; if (!sel.value) { prefs.font = 'Literata'; sel.value = 'Literata'; }
+  /* Only fall back to Literata once your uploaded fonts have loaded and the chosen one really is gone */
+  sel.value = prefs.font; if (!sel.value && fontsLoaded) { prefs.font = 'Literata'; sel.value = 'Literata'; savePrefs(); }
   const ul = $('#ufList'); ul.replaceChildren(); $('#ufWrap').hidden = !userFonts.length;
   for (const f of userFonts) {
     const li = el('li'); const n = el('span', null, f.name); n.style.fontFamily = `"uf-${f.id}"`;
