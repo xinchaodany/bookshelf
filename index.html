@@ -1130,6 +1130,7 @@ function firstVisible(){
 function layout(anchor){
   /* exact (fractional) width: rounding it made pages drift sideways on screens like the Palma's */
   W = vp.getBoundingClientRect().width || innerWidth;
+  pg.getAnimations?.().forEach(a => a.cancel());
   pg.style.setProperty('--pw', W + 'px');
   pg.style.transform = 'none';
   const last = pg.lastElementChild; const rs = last ? last.getClientRects() : [];
@@ -1191,11 +1192,20 @@ function relayout(){
   clearTimeout(relayoutTimer);
   relayoutTimer = setTimeout(() => { if (cur && !$('#readerView').hidden) layout(tts.on && tts.para != null ? tts.para : cur.anchor); }, 120);
 }
-function goPage(n){
+function goPage(n, dir){
+  const from = -curPage * W;
   curPage = Math.max(0, Math.min(n, pageCount - 1));
-  pg.style.transform = `translateX(${-curPage * W}px)`;
+  const to = -curPage * W;
+  pg.style.transform = `translateX(${to}px)`;
   cur.anchor = firstVisible();
+  if (dir && from !== to) slide(from, to);
   updateStatus(); saveProgress();
+}
+/* Slide page turn: a short move from the old page to the new one */
+function slide(from, to){
+  if (!pg.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  pg.getAnimations().forEach(a => a.cancel());
+  pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration: 220, easing: 'cubic-bezier(.25,.8,.3,1)' });
 }
 function bookPct(){
   const atEnd = cur.ch === cur.chapters.length - 1 && curPage === pageCount - 1;
@@ -1212,12 +1222,12 @@ function updateStatus(){
 }
 function turn(dir){
   if (dir > 0) {
-    if (curPage < pageCount - 1) goPage(curPage + 1);
-    else if (cur.ch < cur.chapters.length - 1) renderChapter(cur.ch + 1, 0);
+    if (curPage < pageCount - 1) goPage(curPage + 1, 1);
+    else if (cur.ch < cur.chapters.length - 1) { renderChapter(cur.ch + 1, 0); slide(-curPage * W + W, -curPage * W); }
     else return;
   } else {
-    if (curPage > 0) goPage(curPage - 1);
-    else if (cur.ch > 0) renderChapter(cur.ch - 1, 'end');
+    if (curPage > 0) goPage(curPage - 1, -1);
+    else if (cur.ch > 0) { renderChapter(cur.ch - 1, 'end'); slide(-curPage * W - W, -curPage * W); }
     else return;
   }
   if (tts.on) ttsPlay(cur.anchor);
