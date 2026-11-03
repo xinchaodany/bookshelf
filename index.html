@@ -285,7 +285,6 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
     <button type="button" id="menuBtn" data-ia="menu" hidden><i data-ic="menu-line"></i></button>
     <span class="sc"><span class="st" id="stTitle"></span><span class="sch" id="stChap"></span></span>
     <span class="sp" id="stPage"></span>
-    <button type="button" id="setBtn" data-ia="settings"><i data-ic="font-size"></i></button>
     <button type="button" id="miniPlay" hidden></button>
   </div>
   <div class="chrome" id="chrome" hidden>
@@ -293,7 +292,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       <div class="rbar-row">
         <button class="btn plain" id="backBtn" type="button"><i data-ic="arrow-left-line"></i><span data-i="library"></span></button>
         <span class="grow"></span>
-        <span class="sys" id="sysInfo"></span>
+        <span class="sys" id="sysInfo" hidden></span>
+        <button class="btn icon plain" id="setBtn" type="button" data-ia="settings"><i data-ic="font-size"></i></button>
       </div>
       <div class="rtitle-row">
         <button class="btn icon plain" id="tocBtn" type="button" data-ia="chapters"><i data-ic="list-unordered"></i></button>
@@ -1245,7 +1245,8 @@ function updateStatus(){
   $('#stTitle').textContent = cur.meta.title;
   $('#stChap').textContent = ' (#' + (cur.ch + 1) + ')';
   const bp = bookPages();
-  $('#stPage').textContent = (bp.exact ? '' : '~') + bp.page + ' / ' + bp.total + ' · ' + Math.floor(bookPct()) + '%';
+  const txt = Math.floor(bookPct()) + '% · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if ($('#stPage').textContent !== txt) $('#stPage').textContent = txt;
 }
 function turn(dir){
   if (dir > 0) {
@@ -1551,6 +1552,8 @@ $('#seriesBack').onclick = () => { openSeries = null; renderLibrary(); scrollTo(
 document.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { uiLang = b.dataset.ui; store.set('ui', uiLang); applyI18n(); });
 addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
 addEventListener('drop', e => { if (!e.dataTransfer?.files.length) return; e.preventDefault(); if (!cur) addFiles([...e.dataTransfer.files]); });
+/* keep the clock in the bottom bar current (only redraws when the minute changes) */
+setInterval(() => { if (cur && !document.hidden) updateStatus(); }, 15000);
 addEventListener('pagehide', () => saveProgress(true));
 /* Save the exact page the moment the app goes to the background (closing from recent apps may skip pagehide) */
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(true); });
