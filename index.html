@@ -1086,7 +1086,7 @@ async function openBook(id){
   if (canFS && !fsInstalled()) setFS(true, true);
   $('#rTitle').textContent = meta.title;
   tts.para = null;
-  renderChapter(Math.min(meta.progress?.ch || 0, cur.chapters.length - 1), meta.progress?.p || 0);
+  renderChapter(Math.min(meta.progress?.ch || 0, cur.chapters.length - 1), meta.progress?.p || 0, meta.progress?.off || 0);
   updateVoices(); updateTTSBar();
 }
 function closeReader(){
@@ -1101,7 +1101,7 @@ function nextInSeries(){
   const sb = seriesBooks(k); const i = sb.findIndex(b => b.id === cur.meta.id);
   return i >= 0 ? sb[i + 1] || null : null;
 }
-function renderChapter(i, anchor = 0){
+function renderChapter(i, anchor = 0, off = 0){
   cur.ch = Math.max(0, Math.min(i, cur.chapters.length - 1));
   pg.replaceChildren();
   cur.chapters[cur.ch].blocks.forEach((b, j) => { const e = el(b.k === 'h' ? 'h2' : 'p', null, b.x); e.dataset.i = j; pg.append(e); });
@@ -1112,7 +1112,7 @@ function renderChapter(i, anchor = 0){
     pg.append(end);
   }
   updateChapLabel();
-  layout(anchor);
+  layout(anchor, off);
 }
 function pageOfRect(r, left){ return Math.max(0, Math.floor((r.left - left + 2) / W)); }
 function pageOfPara(j){
@@ -1127,7 +1127,32 @@ function firstVisible(){
   }
   return Math.max(0, ps.length - 1);
 }
-function layout(anchor){
+/* Exact reading position = paragraph + character where the page starts,
+   so a long paragraph spanning several pages reopens on the right page */
+function pageAt(e, off){
+  if (!e) return 0;
+  const left = pg.getBoundingClientRect().left, node = e.firstChild;
+  if (off > 0 && node && node.nodeType === 3 && node.length) {
+    const o = Math.min(off, node.length - 1), r = document.createRange();
+    r.setStart(node, o); r.setEnd(node, o + 1);
+    const rect = r.getClientRects()[0]; if (rect) return pageOfRect(rect, left);
+  }
+  const rs = e.getClientRects(); return rs.length ? pageOfRect(rs[0], left) : 0;
+}
+function firstOffset(j){
+  const e = paras()[j]; if (!e) return 0;
+  const left = pg.getBoundingClientRect().left, rs = e.getClientRects();
+  if (!rs.length || pageOfRect(rs[0], left) >= curPage) return 0;
+  const node = e.firstChild; if (!node || node.nodeType !== 3 || !node.length) return 0;
+  const r = document.createRange(); let lo = 0, hi = node.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1; r.setStart(node, mid); r.setEnd(node, mid + 1);
+    const rect = r.getClientRects()[0], p = rect ? pageOfRect(rect, left) : curPage;
+    if (p >= curPage) hi = mid; else lo = mid + 1;
+  }
+  return lo;
+}
+function layout(anchor, off = 0){
   /* exact (fractional) width: rounding it made pages drift sideways on screens like the Palma's */
   W = vp.getBoundingClientRect().width || innerWidth;
   pg.getAnimations?.().forEach(a => a.cancel());
@@ -1136,7 +1161,7 @@ function layout(anchor){
   const last = pg.lastElementChild; const rs = last ? last.getClientRects() : [];
   pageCount = rs.length ? pageOfRect(rs[rs.length - 1], pg.getBoundingClientRect().left) + 1 : 1;
   let n = 0;
-  if (anchor === 'end') n = pageCount - 1; else if (anchor > 0) n = pageOfPara(anchor);
+  if (anchor === 'end') n = pageCount - 1; else if (anchor > 0 || off > 0) n = off > 0 ? pageAt(paras()[anchor], off) : pageOfPara(anchor);
   goPage(n);
   ensurePageCounts();
 }
@@ -1190,14 +1215,14 @@ function bookPages(){
 let relayoutTimer;
 function relayout(){
   clearTimeout(relayoutTimer);
-  relayoutTimer = setTimeout(() => { if (cur && !$('#readerView').hidden) layout(tts.on && tts.para != null ? tts.para : cur.anchor); }, 120);
+  relayoutTimer = setTimeout(() => { if (cur && !$('#readerView').hidden) { if (tts.on && tts.para != null) layout(tts.para); else layout(cur.anchor, cur.anchorOff || 0); } }, 120);
 }
 function goPage(n, dir){
   const from = -curPage * W;
   curPage = Math.max(0, Math.min(n, pageCount - 1));
   const to = -curPage * W;
   pg.style.transform = `translateX(${to}px)`;
-  cur.anchor = firstVisible();
+  cur.anchor = firstVisible(); cur.anchorOff = firstOffset(cur.anchor);
   if (dir && from !== to) slide(from, to);
   updateStatus(); saveProgress();
 }
@@ -1239,7 +1264,7 @@ function saveProgress(now){
     if (!cur) return;
     const p = (tts.on && tts.para != null) ? tts.para : cur.anchor;
     const bp = bookPages();
-    cur.meta.progress = { ch: cur.ch, p, pct: bookPct(), chTitle: chapTitle(cur.ch), page: bp.page, total: bp.total };
+    cur.meta.progress = { ch: cur.ch, p, off: (tts.on && tts.para != null) ? 0 : (cur.anchorOff || 0), pct: bookPct(), chTitle: chapTitle(cur.ch), page: bp.page, total: bp.total };
     idbPut('meta', cur.meta).catch(() => {});
   };
   clearTimeout(saveTimer);
@@ -1525,6 +1550,8 @@ document.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { uiLang =
 addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
 addEventListener('drop', e => { if (!e.dataTransfer?.files.length) return; e.preventDefault(); if (!cur) addFiles([...e.dataTransfer.files]); });
 addEventListener('pagehide', () => saveProgress(true));
+/* Save the exact page the moment the app goes to the background (closing from recent apps may skip pagehide) */
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(true); });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
 mountIcons(); disarmDelete();
