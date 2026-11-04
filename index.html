@@ -127,10 +127,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .prog .bar{min-width:36px}
 /* big 48px touch area with a 34px visible circle, so it's easy to hit on the Palma */
 .cstar{position:absolute;top:-4px;right:-4px;z-index:2;width:48px;height:48px;border-radius:50%;
-  background:radial-gradient(circle, var(--bg) 0 15.5px, var(--ink) 16px 17px, transparent 17.5px);touch-action:manipulation}
+  background:radial-gradient(circle, var(--ink) 0 17px, transparent 17.5px);color:var(--bg);touch-action:manipulation}
 .cstar .ri{width:19px;height:19px}
 .cell .copen{all:unset;box-sizing:border-box;display:block;cursor:pointer;position:relative}
-.tag{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 20px);background:var(--bg);color:var(--ink);border:1.5px solid var(--ink);border-radius:4px;font-size:11px;font-weight:700;line-height:1.4;padding:1px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 20px);background:var(--ink);color:var(--bg);border:0;border-radius:4px;font-size:11px;font-weight:700;line-height:1.4;padding:2px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cell .copen:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .cell .thumb{width:100%;height:auto;aspect-ratio:2/3;padding:9px 7px 7px 11px}
 .cell .thumb.img{padding:0}
