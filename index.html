@@ -1298,7 +1298,7 @@ function updateStatus(){
   const pp = bookPages(), clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if ($('#stChap').textContent !== clock + ' · ') $('#stChap').textContent = clock + ' · ';
   const bp = bookPages();
-  const txt = 'P.' + (pp.exact ? '' : '~') + pp.page + '/' + pp.total + ' · ' + Math.floor(bookPct()) + '%';
+  const txt = 'P.' + (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
   if ($('#stPage').textContent !== txt) $('#stPage').textContent = txt;
 }
 function turn(dir){
