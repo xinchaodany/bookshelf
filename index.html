@@ -185,7 +185,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 .status .sch{flex:none;white-space:pre;padding-right:12px}
 .status .sclock{flex:none;white-space:pre;font-variant-numeric:tabular-nums}
 .status .st{padding-right:12px}
-.status .sp{white-space:nowrap;padding-right:6px;font-variant-numeric:tabular-nums}
+.status .sp{white-space:nowrap;padding-right:6px;font-variant-numeric:tabular-nums;justify-self:end}
+/* three columns: clock + title | play button (centred) | page */
+.status{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+.status .sc{grid-column:1}
+.status #miniPlay{grid-column:2;color:var(--rink);min-width:48px}
+.status #miniPlay .ri{width:24px;height:24px}
+.status .sp{grid-column:3}
 .chrome{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;color:var(--rink)}
 .chrome .btn{border-color:var(--rink);color:var(--rink);background:var(--rbg)}
 .chrome .btn.primary{background:var(--rink);color:var(--rbg)}
@@ -204,7 +210,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .scrim{flex:1}
 .tts{background:var(--rbg);border-top:2px solid var(--rink);padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));display:grid;gap:12px}
 .tts .row{display:flex;gap:10px;align-items:center}
-.tts .row .play{flex:1;min-width:0}
+.tts .row .play{flex:1;min-width:0;padding:0 10px}
+.tts .step button{min-width:40px}
+.tts .step output{min-width:50px}
 .tts select{width:100%;min-height:46px;background:var(--rbg);color:var(--rink);border:2px solid var(--rink);border-radius:8px;padding:0 10px;font-weight:500}
 .note{margin:0;font-size:13px;color:var(--rmuted);line-height:1.4}
 .step{display:inline-flex;align-items:center;border:2px solid currentColor;border-radius:8px;overflow:hidden}
@@ -311,8 +319,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   <div class="status">
     <button type="button" id="menuBtn" data-ia="menu" hidden><i data-ic="menu-line"></i></button>
     <span class="sc"><span class="sclock" id="stChap"></span><span class="st" id="stTitle"></span></span>
+    <button type="button" id="miniPlay"></button>
     <span class="sp" id="stPage"></span>
-    <button type="button" id="miniPlay" hidden></button>
   </div>
   <div class="chrome" id="chrome" hidden>
     <header class="rbar">
@@ -328,8 +336,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       </div>
     </header>
     <div class="scrim" id="scrim"></div>
-    <!-- Read-aloud is switched off for now: remove "hidden" here, on #miniPlay and on the two settings rows to bring it back -->
-    <div class="tts" hidden>
+    <div class="tts">
       <div class="row">
         <button class="btn primary play" id="playBtn" type="button"></button>
         <button class="btn icon" id="stopBtn" type="button" data-ia="stop"><i data-ic="stop-fill"></i></button>
@@ -394,8 +401,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
       <div class="seg" role="group" id="rtSeg">
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button>
       </div></div>
-    <label class="field" hidden><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
-    <div class="srow" hidden><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
+    <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
+    <div class="srow"><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
     <div class="srow"><span class="slabel" data-i="appSize"></span>
       <div class="step"><button type="button" data-step="uiScale:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="scaleOut"></output><button type="button" data-step="uiScale:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
     <div class="srow" hidden><span class="slabel" data-i="uiLangLabel"></span>
