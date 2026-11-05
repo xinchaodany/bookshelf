@@ -186,12 +186,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .status .sclock{flex:none;white-space:pre;font-variant-numeric:tabular-nums}
 .status .st{padding-right:12px}
 .status .sp{white-space:nowrap;padding-right:6px;font-variant-numeric:tabular-nums;justify-self:end}
-/* three columns: clock + title | play button (centred) | page */
-.status{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+/* two columns: clock + title | page */
+.status{display:grid;grid-template-columns:minmax(0,1fr) auto}
 .status .sc{grid-column:1}
-.status #miniPlay{grid-column:2;color:var(--rink);min-width:48px}
-.status #miniPlay .ri{width:24px;height:24px}
-.status .sp{grid-column:3}
+.status .sp{grid-column:2}
 .chrome{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;color:var(--rink)}
 .chrome .btn{border-color:var(--rink);color:var(--rink);background:var(--rbg)}
 .chrome .btn.primary{background:var(--rink);color:var(--rbg)}
@@ -319,7 +317,6 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   <div class="status">
     <button type="button" id="menuBtn" data-ia="menu" hidden><i data-ic="menu-line"></i></button>
     <span class="sc"><span class="sclock" id="stChap"></span><span class="st" id="stTitle"></span></span>
-    <button type="button" id="miniPlay"></button>
     <span class="sp" id="stPage"></span>
   </div>
   <div class="chrome" id="chrome" hidden>
@@ -328,6 +325,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
         <button class="btn plain" id="backBtn" type="button"><i data-ic="arrow-left-line"></i><span data-i="library"></span></button>
         <span class="grow"></span>
         <span class="sys" id="sysInfo" hidden></span>
+        <button class="btn icon plain" id="miniPlay" type="button"></button>
         <button class="btn icon plain" id="setBtn" type="button" data-ia="settings"><i data-ic="font-size"></i></button>
       </div>
       <div class="rtitle-row">
