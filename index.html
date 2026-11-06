@@ -1463,6 +1463,7 @@ $('#menuBtn').onclick = () => showChrome(true);
 $('#backBtn').onclick = closeReader;
 $('#setBtn').onclick = () => {
   showChrome(false); $('#hintRow').hidden = store.get('hintSeen', false);
+  if (cur) updateVoices(); /* pick up voices installed since the app opened */
   const mode = document.fullscreenElement ? 'fullscreen (browser)' : (['fullscreen', 'standalone', 'minimal-ui'].find(m => matchMedia('(display-mode: ' + m + ')').matches) || 'browser');
   $('#dispMode').textContent = t('displayMode', { m: mode });
   $('#setDlg').showModal();
@@ -1670,6 +1671,12 @@ $('#bgBtn').onclick = () => { prefs.bg = !prefs.bg; savePrefs(); updateTTSBar();
 $('#voiceSel').onchange = e => { store.set('voice-' + bookLang(), e.target.value); tts.forceDefault = false; tts.fails = 0; if (tts.on) ttsPlay(tts.para); };
 document.querySelectorAll('[data-rate]').forEach(b => b.onclick = () => stepRate(+b.dataset.rate));
 if (synth) synth.addEventListener?.('voiceschanged', () => { if (cur) updateVoices(); });
+/* iPhone/iPad often load the voice list late without announcing it: keep checking for a few seconds */
+if (synth) { let tries = 0, last = -1; const poll = setInterval(() => {
+  const n = synth.getVoices().length; tries++;
+  if (n !== last) { last = n; if (cur) updateVoices(); }
+  if (tries > 30) clearInterval(poll);
+}, 500); }
 
 /* ================= Wiring ================= */
 $('#addBtn').onclick = $('#addBtn2').onclick = () => $('#bookInput').click();
