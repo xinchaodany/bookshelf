@@ -288,6 +288,13 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .toc button:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 .toc button[aria-current="true"]{font-weight:700;background:var(--ink);color:var(--bg)}
 .toast{position:fixed;left:12px;right:12px;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--bg);color:var(--ink);border:2px solid var(--ink);padding:12px 14px;border-radius:8px;font-size:15px;text-align:center}
+/* App never gets wider than the Boox Palma's screen height (824 points), centred on wider screens */
+:root{--side:max(0px, calc((100vw - 824px) / 2))}
+body{max-width:824px;margin:0 auto}
+.vp,.status,.chrome{left:var(--side);right:var(--side)}
+.fab{right:calc(var(--side) + 18px)}
+.fabbar{left:calc(var(--side) + 18px);right:calc(var(--side) + 18px)}
+.toast{left:calc(var(--side) + 12px);right:calc(var(--side) + 12px)}
 </style>
 </head>
 <body data-view="library">
