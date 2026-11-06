@@ -447,7 +447,7 @@ body{max-width:824px;margin:0 auto}
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button>
       </div></div>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
-    <div class="srow"><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
+    <div class="srow" hidden><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
     <div class="srow" hidden><span class="slabel" data-i="appSize"></span>
       <div class="step"><button type="button" data-step="uiScale:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="scaleOut"></output><button type="button" data-step="uiScale:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
     <div class="srow" hidden><span class="slabel" data-i="uiLangLabel"></span>
@@ -487,8 +487,8 @@ const I18N = {
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
     font:'Font', addFont:'Upload a font (.ttf, .otf, .woff)', yourFonts:'Your fonts', remove:'Remove',
-    size:'Text size', spacing:'Line spacing', margins:'Margins', darker:'Darker text', page:'Page',
-    tAuto:'Auto', tPaper:'White', tInvert:'Inverted', uiLangLabel:'Interface language',
+    size:'Text size', spacing:'Line spacing', margins:'Margins', darker:'Darker text', page:'Theme',
+    tAuto:'Auto', tPaper:'Light', tInvert:'Dark', uiLangLabel:'Interface language',
     sysSerif:'System serif', sysSans:'System sans-serif',
     fontHint:'Check that Vietnamese marks display correctly before choosing a font.',
     listen:'Listen', resume:'Resume', pause:'Pause', stop:'Stop', voice:'Voice', speed:'Speed', defVoice:'Default voice',
@@ -501,7 +501,7 @@ const I18N = {
     notStarted:'Not started', pct:'{p}% read', finished:'Finished',
     fSeries:'Series', fSeriesNo:'Number', allBooks:'All books', nBooks:'{n} books',
     seriesDone:'{d} of {n} finished', nextInSeries:'Next in series: {t}', inSeries:'{s} #{n}',
-    googleVoices:'Google voices', otherVoices:'Other voices', bgRead:'Keep reading with screen off',
+    googleVoices:'Google voices', otherVoices:'Other voices', bgRead:'Keep TTS with screen off',
     noGoogle:'No Google {lang} voice here. On Android, set “Speech Services by Google” as the text-to-speech engine and download its voices.'
   },
   vi: {
@@ -1074,6 +1074,7 @@ let prefs = Object.assign({ font:'Literata', size:17, lh:1.6, mx:19, bold:false,
 if (prefs.rt === 'sepia') prefs.rt = 'paper';
 if (prefs.rt === 'night') prefs.rt = 'invert';
 prefs.bold = false; /* "Darker text" option removed */
+prefs.bg = false; /* "Keep TTS with screen off" hidden for now: it didn't keep reading on the Palma */
 /* One-time switch to the new 80% default app size (can still be changed in Aa > App size) */
 /* Everything is now drawn at the old 80% size directly (no page zooming), on every device.
    One-time: convert text size and margins chosen under the old zoom so pages look the same. */
@@ -1175,6 +1176,10 @@ function applyPrefs(){
   $('#indentBtn').setAttribute('aria-pressed', !!prefs.indent);
   pg.classList.toggle('indent', !!prefs.indent);
   document.body.dataset.rt = prefs.rt;
+  /* Theme applies to the whole app: Auto follows the device, Light / Dark override it */
+  if (prefs.rt === 'paper') document.documentElement.dataset.theme = 'light';
+  else if (prefs.rt === 'invert') document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
   document.querySelectorAll('#rtSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.rt === prefs.rt));
   $('#rateOut').textContent = Number(prefs.rate).toFixed(1) + '×';
   if (cur) relayout();
