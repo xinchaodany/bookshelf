@@ -50,7 +50,7 @@ body{
 }
 body[data-rt="paper"]{--rbg:#FFFFFF;--rink:#000000;--rmuted:#333333;--rhl:#D4D4D4}
 body[data-rt="invert"]{--rbg:#000000;--rink:#FFFFFF;--rmuted:#CFCFCF;--rhl:#3D3D3D}
-body[data-rt="soft"]{--rbg:#F0F0EB;--rink:#232320;--rmuted:#77766F;--rhl:#E4E9C9}
+body[data-rt="soft"]{--rbg:#DADAD5;--rink:#21211F;--rmuted:#66665F;--rhl:#D2D7B8}
 body[data-view="reader"]{overflow:hidden;background:var(--rbg)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
 body[data-view="reader"]::before{background:var(--rbg)}
@@ -327,8 +327,8 @@ dialog{border-radius:28px 28px 0 0}
 /* ---------- Soft theme (for phones): warm grey, gentle contrast, pill shapes, thin lines ---------- */
 :root[data-theme="soft"]{
   color-scheme:light;
-  --bg:#F0F0EB; --ink:#1F1F1D; --muted:#6E6E69; --soft:#E2E2DA; --hl:#E4E9C9;
-  --accent:#1F1F1D; --accent-ink:#F4F3EE; --line2:#DCDCD4; --field:#F9F9F5; --sheet:#F9F9F5;
+  --bg:#DADAD5; --ink:#1F1F1D; --muted:#5F5F5A; --soft:#CACAC4; --hl:#D2D7B8;
+  --accent:#1F1F1D; --accent-ink:#F4F3EE; --line2:#C1C1BA; --field:#E8E8E3; --sheet:#E8E8E3;
   --lime:#CBDC3E; --olive:#55691C; --olivebg:#E4E9C9; --shadow:0 6px 22px rgba(40,40,30,.08);
 }
 [data-theme="soft"] .btn{border-width:1px;border-color:var(--line2);border-radius:999px;background:transparent}
@@ -367,19 +367,19 @@ dialog{border-radius:28px 28px 0 0}
 [data-theme="soft"] .top{border-bottom:0}
 [data-theme="soft"] .search,[data-theme="soft"] .sortwrap select{background:var(--sheet);border:1px solid var(--line2);box-shadow:var(--shadow)}
 [data-theme="soft"] .top-row .seg{background:var(--sheet);box-shadow:var(--shadow)}
-[data-theme="soft"] #addBtn{background:var(--lime);border-color:var(--lime);color:#1F1F1D;border-radius:50%;box-shadow:0 8px 24px rgba(150,170,20,.28)}
-[data-theme="soft"] #addBtn2{background:var(--lime);border-color:var(--lime);color:#1F1F1D}
+[data-theme="soft"] #addBtn{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);border-radius:50%;box-shadow:var(--shadow)}
+[data-theme="soft"] #addBtn2{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 [data-theme="soft"] .list:not(.grid) .item{margin:10px 16px;border:1px solid var(--line2);border-radius:24px;background:var(--sheet)}
 [data-theme="soft"] .list:not(.grid) .open{padding-left:14px}
 [data-theme="soft"] .now{border:1px solid var(--line2);background:var(--sheet);box-shadow:var(--shadow)}
 [data-theme="soft"] .nowhead,[data-theme="soft"] .count{text-transform:none;letter-spacing:0;font-size:14px;font-weight:500}
-[data-theme="soft"] .fab{background:var(--lime);color:#1F1F1D;box-shadow:0 8px 24px rgba(150,170,20,.3)}
+[data-theme="soft"] .fab{background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow)}
 [data-theme="soft"] .fabbar{background:var(--sheet);color:var(--ink);border:1px solid var(--line2);box-shadow:var(--shadow)}
-[data-theme="soft"] .fabbar #fbPlay{background:var(--lime);border-radius:50%;width:48px;height:48px}
+[data-theme="soft"] .fabbar #fbPlay{background:var(--accent);color:var(--accent-ink);border-radius:50%;width:48px;height:48px}
 [data-theme="soft"] .prog .bar i,[data-theme="soft"] .cbar i{background:var(--olive)}
 [data-theme="soft"] .cstar{background:radial-gradient(circle, var(--sheet) 0 17px, transparent 17.5px);color:var(--ink)}
 [data-theme="soft"] .tag{background:var(--olivebg);color:var(--olive)}
-[data-theme="soft"] dialog .field input,[data-theme="soft"] dialog .field select,[data-theme="soft"] dialog .field textarea,[data-theme="soft"] dialog .fontbtn{background:#ECECE6}
+[data-theme="soft"] dialog .field input,[data-theme="soft"] dialog .field select,[data-theme="soft"] dialog .field textarea,[data-theme="soft"] dialog .fontbtn{background:#DADAD4}
 /* Segmented controls (List|Grid, Theme): a pill track with a pill-shaped selected item, no divider lines */
 .seg{padding:3px;gap:2px;overflow:visible;align-items:center}
 .seg button{border-radius:999px;border:0 !important}
