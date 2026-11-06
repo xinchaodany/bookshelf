@@ -380,6 +380,12 @@ dialog{border-radius:28px 28px 0 0}
 [data-theme="soft"] .cstar{background:radial-gradient(circle, var(--sheet) 0 17px, transparent 17.5px);color:var(--ink)}
 [data-theme="soft"] .tag{background:var(--olivebg);color:var(--olive)}
 [data-theme="soft"] dialog .field input,[data-theme="soft"] dialog .field select,[data-theme="soft"] dialog .field textarea,[data-theme="soft"] dialog .fontbtn{background:#ECECE6}
+/* Segmented controls (List|Grid, Theme): a pill track with a pill-shaped selected item, no divider lines */
+.seg{padding:3px;gap:2px;overflow:visible;align-items:center}
+.seg button{border-radius:999px;border:0 !important}
+.seg button + button{border-left:0 !important}
+.viewseg button{min-width:44px}
+.top-row #addBtn{width:44px;height:44px;min-height:44px}
 </style>
 </head>
 <body data-view="library">
