@@ -30,7 +30,7 @@
   --serif:Literata, Georgia, "Times New Roman", serif;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
+  :root:not([data-theme="light"]):not([data-theme="soft"]){
     color-scheme:dark;
     --bg:#000000; --ink:#FFFFFF; --muted:#CFCFCF; --soft:#5C5C5C; --hl:#3D3D3D;
     --accent:#FFFFFF; --accent-ink:#000000;
@@ -50,6 +50,7 @@ body{
 }
 body[data-rt="paper"]{--rbg:#FFFFFF;--rink:#000000;--rmuted:#333333;--rhl:#D4D4D4}
 body[data-rt="invert"]{--rbg:#000000;--rink:#FFFFFF;--rmuted:#CFCFCF;--rhl:#3D3D3D}
+body[data-rt="soft"]{--rbg:#F0F0EB;--rink:#232320;--rmuted:#77766F;--rhl:#E4E9C9}
 body[data-view="reader"]{overflow:hidden;background:var(--rbg)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
 body[data-view="reader"]::before{background:var(--rbg)}
@@ -307,6 +308,78 @@ body{max-width:824px;margin:0 auto}
 @media (max-width:400px){.top-row .brand span{display:none}}
 .fabbar{left:calc(var(--side) + 15.3px);right:calc(var(--side) + 15.3px)}
 .toast{left:calc(var(--side) + 10.2px);right:calc(var(--side) + 10.2px)}
+/* ---------- Fully rounded UI (all themes): pills for controls, circles for icon buttons, rounder covers ---------- */
+.btn,.seg,.search,.sortwrap select,.field input,.field select,.fontbtn,.step,.tag,.toast,.dupbar{border-radius:999px}
+.btn.icon,.more,.star:not(.cstar),.x{border-radius:50%}
+.seg{overflow:hidden}
+.field textarea{border-radius:20px}
+.fontlist,.preview{border-radius:20px}
+.now{border-radius:24px}
+.now > button{border-radius:22px}
+.prog .bar,.cbar{border-radius:999px}
+.thumb{border-radius:6px 12px 12px 6px}
+.cell .thumb{border-radius:8px 16px 16px 8px}
+.now .thumb{border-radius:7px 14px 14px 7px}
+dialog{border-radius:28px 28px 0 0}
+@media (min-width:512px){dialog{border-radius:28px}}
+.toc button{border-radius:14px}
+.list:not(.grid) .open:focus-visible,.cell .copen:focus-visible{border-radius:16px}
+/* ---------- Soft theme (for phones): warm grey, gentle contrast, pill shapes, thin lines ---------- */
+:root[data-theme="soft"]{
+  color-scheme:light;
+  --bg:#F0F0EB; --ink:#1F1F1D; --muted:#6E6E69; --soft:#E2E2DA; --hl:#E4E9C9;
+  --accent:#1F1F1D; --accent-ink:#F4F3EE; --line2:#DCDCD4; --field:#F9F9F5; --sheet:#F9F9F5;
+  --lime:#CBDC3E; --olive:#55691C; --olivebg:#E4E9C9; --shadow:0 6px 22px rgba(40,40,30,.08);
+}
+[data-theme="soft"] .btn{border-width:1px;border-color:var(--line2);border-radius:999px;background:transparent}
+[data-theme="soft"] .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+[data-theme="soft"] .btn.plain{border-color:transparent}
+[data-theme="soft"] .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+[data-theme="soft"] .seg{border-width:1px;border-color:var(--line2);border-radius:999px;background:transparent}
+[data-theme="soft"] .seg button+button{border-left-width:1px;border-left-color:var(--line2)}
+[data-theme="soft"] .seg button[aria-pressed="true"]{border-radius:999px}
+[data-theme="soft"] .search,[data-theme="soft"] .sortwrap select,[data-theme="soft"] .field input,[data-theme="soft"] .field select{border:0;background:var(--field);border-radius:999px}
+[data-theme="soft"] .field textarea{border:0;background:var(--field);border-radius:18px}
+[data-theme="soft"] .fontbtn{border:0;background:var(--field);border-radius:999px}
+[data-theme="soft"] .fontlist{border:1px solid var(--line2);border-radius:20px;background:var(--sheet)}
+[data-theme="soft"] .preview{border:1px solid var(--line2);border-radius:18px}
+[data-theme="soft"] .step{border-width:1px;border-color:var(--line2);border-radius:999px}
+[data-theme="soft"] .step output{border-left-width:1px;border-right-width:1px;border-color:var(--line2)}
+[data-theme="soft"] .top{border-bottom:1px solid var(--soft)}
+[data-theme="soft"] .shead{border-bottom:1px solid var(--soft)}
+[data-theme="soft"] .item{border-bottom-color:var(--soft)}
+[data-theme="soft"] .thumb{border-width:1px;border-color:var(--line2);box-shadow:inset 3px 0 0 var(--line2)}
+[data-theme="soft"] .thumb.s1{background:#3A3A36;color:#F4F3EE;border-color:#3A3A36;box-shadow:inset 3px 0 0 #55554F}
+[data-theme="soft"] .thumb.s2::after{background:var(--line2)}
+[data-theme="soft"] .thumb.stack{box-shadow:inset 3px 0 0 var(--line2),4px -4px 0 -1px var(--bg),4px -4px 0 0 var(--line2),8px -8px 0 -1px var(--bg),8px -8px 0 0 var(--line2)}
+[data-theme="soft"] .now{border:0;background:var(--sheet);border-radius:22px}
+[data-theme="soft"] .dupbar{border:0;background:var(--sheet);border-radius:18px}
+[data-theme="soft"] .prog .bar,[data-theme="soft"] .cbar{border:0;background:var(--soft);border-radius:999px}
+[data-theme="soft"] .tag{border-radius:999px;padding-left:8px;padding-right:8px}
+[data-theme="soft"] dialog{border:0;border-radius:28px 28px 0 0;background:var(--sheet)}
+[data-theme="soft"] dialog::backdrop{background:rgba(60,60,55,.35)}
+@media (min-width:512px){[data-theme="soft"] dialog{border-radius:28px}}
+[data-theme="soft"] .toc li{border-bottom-color:var(--soft)}
+[data-theme="soft"] .toc button[aria-current="true"]{background:var(--field);color:var(--ink);border-radius:14px}
+[data-theme="soft"] .toast{border:0;border-radius:999px;background:var(--ink);color:var(--bg)}
+[data-theme="soft"] .rbar{border-bottom:1px solid var(--soft)}
+/* floating, card-like pieces with soft shadows; lime for the main "+" action */
+[data-theme="soft"] .top{border-bottom:0}
+[data-theme="soft"] .search,[data-theme="soft"] .sortwrap select{background:var(--sheet);border:1px solid var(--line2);box-shadow:var(--shadow)}
+[data-theme="soft"] .top-row .seg{background:var(--sheet);box-shadow:var(--shadow)}
+[data-theme="soft"] #addBtn{background:var(--lime);border-color:var(--lime);color:#1F1F1D;border-radius:50%;box-shadow:0 8px 24px rgba(150,170,20,.28)}
+[data-theme="soft"] #addBtn2{background:var(--lime);border-color:var(--lime);color:#1F1F1D}
+[data-theme="soft"] .list:not(.grid) .item{margin:10px 16px;border:1px solid var(--line2);border-radius:24px;background:var(--sheet)}
+[data-theme="soft"] .list:not(.grid) .open{padding-left:14px}
+[data-theme="soft"] .now{border:1px solid var(--line2);background:var(--sheet);box-shadow:var(--shadow)}
+[data-theme="soft"] .nowhead,[data-theme="soft"] .count{text-transform:none;letter-spacing:0;font-size:14px;font-weight:500}
+[data-theme="soft"] .fab{background:var(--lime);color:#1F1F1D;box-shadow:0 8px 24px rgba(150,170,20,.3)}
+[data-theme="soft"] .fabbar{background:var(--sheet);color:var(--ink);border:1px solid var(--line2);box-shadow:var(--shadow)}
+[data-theme="soft"] .fabbar #fbPlay{background:var(--lime);border-radius:50%;width:48px;height:48px}
+[data-theme="soft"] .prog .bar i,[data-theme="soft"] .cbar i{background:var(--olive)}
+[data-theme="soft"] .cstar{background:radial-gradient(circle, var(--sheet) 0 17px, transparent 17.5px);color:var(--ink)}
+[data-theme="soft"] .tag{background:var(--olivebg);color:var(--olive)}
+[data-theme="soft"] dialog .field input,[data-theme="soft"] dialog .field select,[data-theme="soft"] dialog .field textarea,[data-theme="soft"] dialog .fontbtn{background:#ECECE6}
 </style>
 </head>
 <body data-view="library">
@@ -444,7 +517,7 @@ body{max-width:824px;margin:0 auto}
     <div class="srow" hidden><span class="slabel" data-i="darker"></span><button class="btn icon" type="button" id="boldBtn" data-ia="darker"><i data-ic="bold"></i></button></div>
     <div class="srow"><span class="slabel" data-i="page"></span>
       <div class="seg" role="group" id="rtSeg">
-        <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button>
+        <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button><button type="button" data-rt="soft" data-i="tSoft"></button>
       </div></div>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="srow" hidden><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
@@ -488,7 +561,7 @@ const I18N = {
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
     font:'Font', addFont:'Upload a font (.ttf, .otf, .woff)', yourFonts:'Your fonts', remove:'Remove',
     size:'Text size', spacing:'Line spacing', margins:'Margins', darker:'Darker text', page:'Theme',
-    tAuto:'Auto', tPaper:'Light', tInvert:'Dark', uiLangLabel:'Interface language',
+    tAuto:'Auto', tPaper:'Light', tInvert:'Dark', tSoft:'Soft', uiLangLabel:'Interface language',
     sysSerif:'System serif', sysSans:'System sans-serif',
     fontHint:'Check that Vietnamese marks display correctly before choosing a font.',
     listen:'Listen', resume:'Resume', pause:'Pause', stop:'Stop', voice:'Voice', speed:'Speed', defVoice:'Default voice',
@@ -1179,6 +1252,7 @@ function applyPrefs(){
   /* Theme applies to the whole app: Auto follows the device, Light / Dark override it */
   if (prefs.rt === 'paper') document.documentElement.dataset.theme = 'light';
   else if (prefs.rt === 'invert') document.documentElement.dataset.theme = 'dark';
+  else if (prefs.rt === 'soft') document.documentElement.dataset.theme = 'soft';
   else delete document.documentElement.dataset.theme;
   document.querySelectorAll('#rtSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.rt === prefs.rt));
   $('#rateOut').textContent = Number(prefs.rate).toFixed(1) + '×';
