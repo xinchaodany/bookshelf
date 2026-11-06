@@ -1364,8 +1364,8 @@ function layout(anchor, off = 0){
   W = vp.getBoundingClientRect().width || innerWidth;
   pg.getAnimations?.().forEach(a => a.cancel());
   pg.style.setProperty('--pw', W + 'px');
-  /* responsive: on wide screens the side margins grow so lines stay a comfortable length (~34 em) */
-  pg.style.setProperty('--mx', Math.max(prefs.mx, (W - prefs.size * 34) / 2) + 'px');
+  /* text uses the full width (up to the app's 824pt maximum = Palma height), with only your Margins setting at the sides */
+  pg.style.setProperty('--mx', prefs.mx + 'px');
   pg.style.transform = 'none';
   const last = pg.lastElementChild; const rs = last ? last.getClientRects() : [];
   pageCount = rs.length ? pageOfRect(rs[rs.length - 1], pg.getBoundingClientRect().left) + 1 : 1;
