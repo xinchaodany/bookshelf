@@ -295,6 +295,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 body{max-width:824px;margin:0 auto}
 .vp,.status,.chrome{left:var(--side);right:var(--side)}
 .fab{right:calc(var(--side) + 18px)}
+/* never let the header push buttons off-screen on narrow phones */
+.top-row .brand{min-width:0;white-space:nowrap;overflow:hidden}
+.top-row .brand span{overflow:hidden;text-overflow:ellipsis}
+.top-row .seg,.top-row .btn{flex:none}
 .fabbar{left:calc(var(--side) + 18px);right:calc(var(--side) + 18px)}
 .toast{left:calc(var(--side) + 12px);right:calc(var(--side) + 12px)}
 </style>
@@ -1070,7 +1074,8 @@ function savePrefs(){ store.set('prefs', prefs); }
 /* App size: makes the phone lay out a wider page, so everything (menus, buttons and text) draws smaller */
 function applyScale(){
   const meta = document.querySelector('meta[name=viewport]'); if (!meta) return;
-  const s = prefs.uiScale || 100;
+  /* App size only works reliably on Android (the Palma); iPhones/iPads and computers stay at 100% so nothing gets cut off */
+  const s = /Android/i.test(navigator.userAgent) ? (prefs.uiScale || 100) : 100;
   const content = s === 100 ? 'width=device-width, initial-scale=1, viewport-fit=cover'
     : 'width=' + Math.round((screen.width || innerWidth) * 100 / s) + ', initial-scale=' + s / 100 + ', minimum-scale=' + s / 100 + ', maximum-scale=' + s / 100 + ', viewport-fit=cover';
   if (meta.getAttribute('content') !== content) meta.setAttribute('content', content);
@@ -1078,6 +1083,7 @@ function applyScale(){
 /* Some browsers only apply a new app size on reload: reload and reopen the same book */
 function checkScale(){
   setTimeout(() => {
+    if (!/Android/i.test(navigator.userAgent)) return;
     const s = prefs.uiScale || 100, want = Math.round((screen.width || innerWidth) * 100 / s);
     if (Math.abs(innerWidth - want) <= 2) return;
     try { if (cur) { saveProgress(true); sessionStorage.setItem('bs-reopen', JSON.stringify({ id: cur.meta.id, settings: true })); } } catch {}
