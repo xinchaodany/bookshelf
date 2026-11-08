@@ -391,7 +391,7 @@ dialog{border-radius:28px 28px 0 0}
   writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;font-size:11px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   color:color-mix(in srgb,var(--rink) 30%,var(--rbg));pointer-events:none;font-family:var(--ui)}
 /* extra space between the vertical title and the text: wider left padding, columns still exactly one screen apart */
-.page{padding-left:calc(var(--mx,18.7px) + 14px);column-width:calc(var(--pw,360px) - 2 * var(--mx,18.7px) - 14px);column-gap:calc(2 * var(--mx,18.7px) + 14px)}
+.page.sidegap{padding-left:calc(var(--mx,18.7px) + 14px);column-width:calc(var(--pw,360px) - 2 * var(--mx,18.7px) - 14px);column-gap:calc(2 * var(--mx,18.7px) + 14px)}
 .status .st{white-space:pre}
 </style>
 </head>
@@ -570,7 +570,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress', sStarred:'To-read', star:'Add to To-read', unstar:'Remove from To-read',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as read', barMsg:'Bottom bar message', barMsgPh:'Leave empty for a greeting by time of day', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as read', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -1387,7 +1387,7 @@ function layout(anchor, off = 0){
    screen size and reading settings; the result is saved so it's instant next time. */
 let measureToken = 0, fontGen = 0;
 const chapChars = c => c.chars ??= c.blocks.reduce((s, b) => s + b.x.length, 0);
-function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, !!prefs.indent, fontGen].join('|'); }
+function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, !!prefs.indent, pg.classList.contains('sidegap'), fontGen].join('|'); }
 function ensurePageCounts(){
   if (!cur) return;
   const sig = layoutSig();
@@ -1466,10 +1466,13 @@ function greeting(){
 }
 function updateStatus(){
   if (!cur) return;
-  if ($('#sideTitle').textContent !== cur.meta.title) $('#sideTitle').textContent = cur.meta.title;
+  /* custom message runs up the left edge (none by default); the book title is back in the bottom bar */
+  const side = (prefs.msg || '').trim();
+  if ($('#sideTitle').textContent !== side) $('#sideTitle').textContent = side;
+  if (pg.classList.contains('sidegap') !== !!side) { pg.classList.toggle('sidegap', !!side); relayout(); }
   const pp = bookPages(), clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if ($('#stChap').textContent !== clock) $('#stChap').textContent = clock;
-  const msg = ' · ' + ((prefs.msg || '').trim() || greeting());
+  const msg = ' · ' + cur.meta.title;
   if ($('#stTitle').textContent !== msg) $('#stTitle').textContent = msg;
   const bp = bookPages();
   const txt = (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
