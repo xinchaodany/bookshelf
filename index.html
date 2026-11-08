@@ -386,6 +386,13 @@ dialog{border-radius:28px 28px 0 0}
 .seg button + button{border-left:0 !important}
 .viewseg button{min-width:44px}
 .top-row #addBtn{width:44px;height:44px;min-height:44px}
+/* Book title running vertically up the left margin of the reading page, faint like the bottom bar */
+.sidetitle{position:fixed;z-index:3;left:calc(var(--side) + 3px);top:calc(env(safe-area-inset-top,0px) + 24px);bottom:calc(32px + 24px + env(safe-area-inset-bottom,0px));
+  writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;font-size:11px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:color-mix(in srgb,var(--rink) 30%,var(--rbg));pointer-events:none;font-family:var(--ui)}
+/* extra space between the vertical title and the text: wider left padding, columns still exactly one screen apart */
+.page{padding-left:calc(var(--mx,18.7px) + 14px);column-width:calc(var(--pw,360px) - 2 * var(--mx,18.7px) - 14px);column-gap:calc(2 * var(--mx,18.7px) + 14px)}
+.status .st{white-space:pre}
 </style>
 </head>
 <body data-view="library">
@@ -431,6 +438,7 @@ dialog{border-radius:28px 28px 0 0}
 <!-- ============ Reader ============ -->
 <section id="readerView" hidden>
   <div class="vp" id="vp"><article class="page" id="page"></article></div>
+  <div class="sidetitle" id="sideTitle" aria-hidden="true"></div>
   <div class="status">
     <button type="button" id="menuBtn" data-ia="menu" hidden><i data-ic="menu-line"></i></button>
     <span class="sc"><span class="sclock" id="stChap"></span><span class="st" id="stTitle"></span></span>
@@ -525,6 +533,7 @@ dialog{border-radius:28px 28px 0 0}
       <div class="seg" role="group" id="rtSeg">
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button><button type="button" data-rt="soft" data-i="tSoft"></button>
       </div></div>
+    <label class="field"><span data-i="barMsg"></span><input id="msgIn" maxlength="40" autocomplete="off" data-ip="barMsgPh"></label>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="srow" hidden><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
     <div class="srow" hidden><span class="slabel" data-i="appSize"></span>
@@ -561,7 +570,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress', sStarred:'To-read', star:'Add to To-read', unstar:'Remove from To-read',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as read', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as read', barMsg:'Bottom bar message', barMsgPh:'e.g. One more chapter', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -1449,11 +1458,13 @@ function bookPct(){
 }
 function updateStatus(){
   if (!cur) return;
-  if ($('#stTitle').textContent !== cur.meta.title) $('#stTitle').textContent = cur.meta.title;
+  if ($('#sideTitle').textContent !== cur.meta.title) $('#sideTitle').textContent = cur.meta.title;
   const pp = bookPages(), clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if ($('#stChap').textContent !== clock + ' · ') $('#stChap').textContent = clock + ' · ';
+  if ($('#stChap').textContent !== clock) $('#stChap').textContent = clock;
+  const msg = (prefs.msg || '').trim() ? ' · ' + prefs.msg.trim() : '';
+  if ($('#stTitle').textContent !== msg) $('#stTitle').textContent = msg;
   const bp = bookPages();
-  const txt = 'P.' + (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
+  const txt = (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
   if ($('#stPage').textContent !== txt) $('#stPage').textContent = txt;
 }
 function turn(dir){
@@ -1525,6 +1536,8 @@ vp.addEventListener('click', e => {
     if (tts.on && p) ttsPlay(+p.dataset.i); else showChrome(true);
   }
 });
+/* Bottom bar message, typed in Reading settings */
+$('#msgIn').oninput = e => { prefs.msg = e.target.value; savePrefs(); updateStatus(); };
 let fabOpen = false;
 function updateFab(){
   const f = $('#ttsFab'); if (!f) return;
@@ -1553,6 +1566,7 @@ $('#menuBtn').onclick = () => showChrome(true);
 $('#backBtn').onclick = closeReader;
 $('#setBtn').onclick = () => {
   showChrome(false); $('#hintRow').hidden = store.get('hintSeen', false);
+  $('#msgIn').value = prefs.msg || '';
   if (cur) updateVoices(); /* pick up voices installed since the app opened */
   const mode = document.fullscreenElement ? 'fullscreen (browser)' : (['fullscreen', 'standalone', 'minimal-ui'].find(m => matchMedia('(display-mode: ' + m + ')').matches) || 'browser');
   $('#dispMode').textContent = t('displayMode', { m: mode });
