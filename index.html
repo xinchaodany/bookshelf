@@ -480,7 +480,7 @@ dialog{border-radius:28px 28px 0 0}
       </div>
       <div class="rtitle-row">
         <button class="btn icon plain" id="tocBtn" type="button" data-ia="chapters"><i data-ic="list-unordered"></i></button>
-        <div class="rtitle"><b id="rTitle"></b><span id="rChap"></span></div>
+        <div class="rtitle"><b id="rTitle"></b><span id="rChap" hidden></span></div>
       </div>
     </header>
     <div class="scrim" id="scrim"></div>
@@ -1354,7 +1354,8 @@ function closeReader(){
   refreshLibrary().then(() => scrollTo(0, libScroll));
 }
 function chapTitle(i){ return cur.chapters[i].title || t('chapter', { n: i + 1 }); }
-function updateChapLabel(){ if (cur) $('#rChap').textContent = Math.floor(bookPct()) + '%'; }
+/* top bar shows the current chapter's name (book title is in the bottom bar) */
+function updateChapLabel(){ if (cur) $('#rTitle').textContent = chapTitle(cur.ch); }
 function nextInSeries(){
   const k = skey(cur.meta); if (!k) return null;
   const sb = seriesBooks(k); const i = sb.findIndex(b => b.id === cur.meta.id);
