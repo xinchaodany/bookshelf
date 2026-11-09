@@ -140,7 +140,7 @@ button,input,select,textarea{font:inherit;color:inherit}
   background:radial-gradient(circle, var(--ink) 0 14.4px, transparent 14.9px);color:var(--bg);touch-action:manipulation}
 .cstar .ri{width:16.1px;height:16.1px}
 .cell .copen{all:unset;box-sizing:border-box;display:block;cursor:pointer;position:relative}
-.tag{position:absolute;left:6.8px;bottom:6.8px;max-width:calc(100% - 17px);background:var(--ink);color:var(--bg);border:0;border-radius:3.4px;font-size:9.4px;font-weight:700;line-height:1.4;padding:2px 5.9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{position:absolute;left:6.8px;bottom:6.8px;max-width:calc(100% - 17px);background:var(--bg);color:var(--ink);border:1.5px solid var(--ink);border-radius:3.4px;font-size:9.4px;font-weight:700;line-height:1.4;padding:1px 5.9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cell .copen:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 .cell .thumb{width:100%;height:auto;aspect-ratio:2/3;padding:7.7px 5.9px 5.9px 9.4px}
 .cell .thumb.img{padding:0}
@@ -385,7 +385,7 @@ dialog{border-radius:28px 28px 0 0}
 [data-theme="soft"] .fabbar #fbPlay{background:var(--accent);color:var(--accent-ink);border-radius:50%;width:48px;height:48px}
 [data-theme="soft"] .prog .bar i,[data-theme="soft"] .cbar i{background:var(--ink)}
 [data-theme="soft"] .cstar{background:radial-gradient(circle, var(--sheet) 0 14.4px, transparent 14.9px);color:var(--ink)}
-[data-theme="soft"] .tag{background:var(--ink);color:var(--accent-ink)}
+[data-theme="soft"] .tag{background:var(--sheet);color:var(--ink);border-color:var(--ink)}
 [data-theme="soft"] dialog .field input,[data-theme="soft"] dialog .field select,[data-theme="soft"] dialog .field textarea,[data-theme="soft"] dialog .fontbtn{background:#DADAD4}
 /* Segmented controls (List|Grid, Theme): a pill track with a pill-shaped selected item, no divider lines */
 .seg{padding:3px;gap:2px;overflow:visible;align-items:center}
