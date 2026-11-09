@@ -410,6 +410,15 @@ dialog{border-radius:28px 28px 0 0}
   .nowrow .now{flex:0 0 86%;margin:0;scroll-snap-align:start}
   .nowrow .now:only-child{flex-basis:100%}
 }
+/* Bottom bar divider = mini progress bar: read part ─ ◆ ─ rest of the book, faint like the bar */
+.status{border-top-color:transparent !important}
+.sprog{position:absolute;left:20.4px;right:11.9px;top:-5px;height:10px;display:flex;align-items:center;gap:5px;pointer-events:none;--p:0}
+.sprog i{display:block;height:1px;border-radius:1px;background:currentColor}
+.sprog .a{flex:none;width:calc((100% - 20px) * var(--p))}
+.sprog .c{flex:1 1 0;min-width:0}
+.sprog .d{flex:none;display:block;width:10px;height:10px}
+.sprog .d svg{display:block;width:10px;height:10px;fill:currentColor}
+.sprog .d .fc{fill:var(--rbg)}
 </style>
 </head>
 <body data-view="library">
@@ -457,6 +466,7 @@ dialog{border-radius:28px 28px 0 0}
   <div class="vp" id="vp"><article class="page" id="page"></article></div>
   <div class="sidetitle" id="sideTitle" aria-hidden="true"></div>
   <div class="status">
+    <div class="sprog" id="sProg" aria-hidden="true"><i class="a"></i><b class="d"><svg viewBox="0 0 20 20" aria-hidden="true"><g transform="translate(0 .52)"><circle cx="10" cy="4.6" r="4.3"/><circle cx="15.14" cy="8.33" r="4.3"/><circle cx="13.17" cy="14.37" r="4.3"/><circle cx="6.83" cy="14.37" r="4.3"/><circle cx="4.86" cy="8.33" r="4.3"/><circle class="fc" cx="10" cy="10" r="2.6"/></g></svg></b><i class="c"></i></div>
     <button type="button" id="menuBtn" data-ia="menu" hidden><i data-ic="menu-line"></i></button>
     <span class="sc"><span class="sclock" id="stChap"></span><span class="st" id="stTitle"></span></span>
     <span class="sp" id="stPage"></span>
@@ -1520,6 +1530,7 @@ function updateStatus(){
   if ($('#stTitle').textContent !== msg) $('#stTitle').textContent = msg;
   const bp = bookPages();
   const txt = (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
+  $('#sProg').style.setProperty('--p', Math.max(0, Math.min(1, bookPct() / 100)));
   if ($('#stPage').textContent !== txt) $('#stPage').textContent = txt;
 }
 function turn(dir){
