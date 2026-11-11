@@ -435,6 +435,10 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
 .chapnav.prev{justify-content:flex-start}
 .chapnav.next{justify-content:flex-end}
 .chapnav .btn{border-color:var(--rink);color:var(--rink);background:var(--rbg)}
+/* pictures inside books: centred, never wider than the text or taller than one page */
+.page figure.bimg{margin:0 0 .75em;padding:0;text-align:center;text-indent:0;break-inside:avoid;line-height:0}
+.page figure.bimg img{display:inline-block;width:auto;height:auto;max-width:100%;max-height:var(--colh,70vh);object-fit:contain}
+.page figure.bimg.speaking img{outline:3px solid var(--rhl);outline-offset:2px}
 </style>
 </head>
 <body data-view="library">
@@ -762,11 +766,18 @@ function parsePlain(text, md){
   return splitBig(chapters);
 }
 const BLOCK_SEL = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,dt,dd,figcaption,td';
-function extractBlocks(doc){
+function extractBlocks(doc, imgBase){
   const body = doc.body || doc.documentElement; const out = [];
   if (!body) return out;
   body.querySelectorAll('script,style,noscript').forEach(n => n.remove());
-  body.querySelectorAll(BLOCK_SEL).forEach(e => {
+  /* with imgBase (EPUB chapters), pictures are kept in reading order as {k:'img'} blocks */
+  body.querySelectorAll(imgBase != null ? BLOCK_SEL + ',img,image' : BLOCK_SEL).forEach(e => {
+    const ln = e.localName.toLowerCase();
+    if (ln === 'img' || ln === 'image') {
+      const src = (e.getAttribute('src') || e.getAttribute('href') || e.getAttribute('xlink:href') || e.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '').trim();
+      if (src && !/^(https?:)?\/\//i.test(src)) out.push({ k: 'img', x: '', s: src.startsWith('data:') ? src : joinPath(imgBase, src), a: (e.getAttribute('alt') || '').trim() });
+      return;
+    }
     if (e.parentElement && e.parentElement.closest(BLOCK_SEL)) return;
     const x = e.textContent.replace(/\s+/g, ' ').trim();
     if (x) out.push({ k: /^h[1-6]$/i.test(e.localName) ? 'h' : 'p', x });
@@ -840,15 +851,35 @@ async function parseEpub(buf){
     const m = manifest[ref.getAttribute('idref')]; if (!m) continue;
     const f = zip.file(m.href); if (!f) continue;
     const doc = new DOMParser().parseFromString(await f.async('string'), 'text/html');
-    const blocks = extractBlocks(doc); if (!blocks.length) continue;
+    const blocks = extractBlocks(doc, m.href.includes('/') ? m.href.slice(0, m.href.lastIndexOf('/') + 1) : ''); if (!blocks.length) continue;
     const firstH = blocks.find(b => b.k === 'h');
     chapters.push({ title: labels[m.href] || (firstH ? firstH.x : ''), blocks });
   }
+  /* pictures: read each one from the EPUB once, remember its size so pages can be laid out before it loads */
+  const typeOf = {}; for (const m of Object.values(manifest)) typeOf[m.href] = m.type;
+  const extType = p => ({ jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp' })[(p.split('.').pop() || '').toLowerCase()] || '';
+  const images = {}, dims = {};
+  for (const c of chapters) for (const b of c.blocks) {
+    if (b.k !== 'img' || b.s.startsWith('data:') || b.s in images) continue;
+    images[b.s] = null;
+    const f = zip.file(b.s); if (!f) continue;
+    try {
+      const raw = await f.async('blob'), type = (typeOf[b.s] || '').startsWith('image/') ? typeOf[b.s] : extType(b.s);
+      images[b.s] = type ? raw.slice(0, raw.size, type) : raw;
+      try { const bm = await createImageBitmap(images[b.s]); dims[b.s] = [bm.width, bm.height]; bm.close && bm.close(); } catch {}
+    } catch {}
+  }
+  for (const c of chapters) {
+    c.blocks = c.blocks.filter(b => b.k !== 'img' || b.s.startsWith('data:') || images[b.s]);
+    for (const b of c.blocks) if (b.k === 'img' && dims[b.s]) { b.w = dims[b.s][0]; b.h = dims[b.s][1]; }
+  }
+  for (const k of Object.keys(images)) if (!images[k]) delete images[k];
+  for (let i = chapters.length - 1; i >= 0; i--) if (!chapters[i].blocks.length) chapters.splice(i, 1);
   if (!coverHref) { const cm = metas.find(m => m.getAttribute('name') === 'cover'); const cid = cm && cm.getAttribute('content'); if (cid && manifest[cid] && manifest[cid].type.startsWith('image/')) coverHref = manifest[cid].href; }
   if (!coverHref) { const g = Object.entries(manifest).find(([id, m]) => m.type.startsWith('image/') && /cover/i.test(id + ' ' + m.href)); if (g) coverHref = g[1].href; }
   let cover = null;
   try { if (coverHref && zip.file(coverHref)) cover = await zip.file(coverHref).async('blob'); } catch {}
-  return { cover, series, seriesNo: Number.isFinite(seriesNo) ? seriesNo : null, chapters: splitBig(chapters), title: dc('title'), author: dc('creator'), lang: dc('language'), desc: dc('description').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim() };
+  return { cover, images, series, seriesNo: Number.isFinite(seriesNo) ? seriesNo : null, chapters: splitBig(chapters), title: dc('title'), author: dc('creator'), lang: dc('language'), desc: dc('description').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim() };
 }
 function guessSeries(name){
   const s = (name || '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1128,7 +1159,7 @@ async function addFiles(files){
         cover: await makeCover(r.cover),
         addedAt: Date.now(), chapterCount: r.chapters.length, progress: { ch: 0, p: 0, pct: 0 }
       };
-      await idbPut('content', { id, chapters: r.chapters });
+      await idbPut('content', { id, chapters: r.chapters, images: r.images || null });
       await idbPut('meta', meta);
       n++; have.add(key);
     } catch (e) { failures.push({ f: f.name, e: e.message || String(e) }); }
@@ -1380,12 +1411,31 @@ let W = 360, curPage = 0, pageCount = 1;
 const vp = $('#vp'), pg = $('#page');
 const paras = () => pg.querySelectorAll('[data-i]');
 
+/* pictures in a book: blob URLs made when needed, released when the book is closed */
+function imgUrl(s){
+  if (s.startsWith('data:')) return s;
+  if (!cur) return '';
+  cur.imgUrls ||= {};
+  if (!cur.imgUrls[s] && cur.images && cur.images[s]) cur.imgUrls[s] = URL.createObjectURL(cur.images[s]);
+  return cur.imgUrls[s] || '';
+}
+function releaseImgs(){ if (cur && cur.imgUrls) { Object.values(cur.imgUrls).forEach(u => URL.revokeObjectURL(u)); cur.imgUrls = {}; } }
+function blockEl(b, live){
+  if (b.k === 'img') {
+    const f = el('figure', 'bimg'), im = document.createElement('img');
+    im.alt = b.a || ''; im.decoding = 'async';
+    if (b.w && b.h) { im.width = b.w; im.height = b.h; }
+    if (live) im.onload = im.onerror = () => relayout();
+    im.src = imgUrl(b.s); f.append(im); return f;
+  }
+  return el(b.k === 'h' ? 'h2' : 'p', null, b.x);
+}
 async function openBook(id){
   const meta = await idbGet('meta', id), content = await idbGet('content', id);
   if (!meta || !content) return;
-  ttsStop();
+  ttsStop(); releaseImgs();
   libScroll = scrollY;
-  cur = { meta, chapters: content.chapters, ch: 0, anchor: 0 };
+  cur = { meta, chapters: content.chapters, images: content.images || {}, imgUrls: {}, ch: 0, anchor: 0 };
   meta.openedAt = Date.now(); meta.nowHidden = false; idbPut('meta', meta).catch(() => {});
   $('#libraryView').hidden = true; $('#readerView').hidden = false; document.body.dataset.view = 'reader';
   showChrome(false);
@@ -1396,7 +1446,7 @@ async function openBook(id){
   updateVoices(); updateTTSBar();
 }
 function closeReader(){
-  ttsStop(); saveProgress(true); cur = null; showChrome(false); setFS(false, true);
+  ttsStop(); saveProgress(true); releaseImgs(); cur = null; showChrome(false); setFS(false, true);
   $('#readerView').hidden = true; $('#libraryView').hidden = false; document.body.dataset.view = 'library';
   refreshLibrary().then(() => scrollTo(0, libScroll));
 }
@@ -1411,7 +1461,7 @@ function nextInSeries(){
 function renderChapter(i, anchor = 0, off = 0){
   cur.ch = Math.max(0, Math.min(i, cur.chapters.length - 1));
   pg.replaceChildren();
-  cur.chapters[cur.ch].blocks.forEach((b, j) => { const e = el(b.k === 'h' ? 'h2' : 'p', null, b.x); e.dataset.i = j; pg.append(e); });
+  cur.chapters[cur.ch].blocks.forEach((b, j) => { const e = blockEl(b, true); e.dataset.i = j; pg.append(e); });
   if (scrollMode()) {
     /* in Scroll mode each chapter is one long page, with buttons to move between chapters */
     if (cur.ch > 0) { const n = el('div', 'chapnav prev'), b = el('button', 'btn icon'); b.type = 'button'; b.append(icon('arrow-left-line')); b.setAttribute('aria-label', t('prevChap')); b.title = t('prevChap'); b.onclick = () => { renderChapter(cur.ch - 1, 'end'); saveProgress(true); }; n.append(b); pg.prepend(n); }
@@ -1471,6 +1521,7 @@ function layout(anchor, off = 0){
   pg.style.setProperty('--pw', W + 'px');
   /* text uses the full width (up to the app's 824pt maximum = Palma height), with only your Margins setting at the sides */
   pg.style.setProperty('--mx', prefs.mx + 'px');
+  pg.style.setProperty('--colh', Math.max(120, vp.clientHeight - 44) + 'px');
   if (scrollMode()) return layoutScroll(anchor, off);
   vp.scrollTop = 0;
   pg.style.transform = 'none';
@@ -1484,7 +1535,7 @@ function layout(anchor, off = 0){
 /* Whole-book page numbers: every chapter is laid out once, out of sight, with the same
    screen size and reading settings; the result is saved so it's instant next time. */
 let measureToken = 0, fontGen = 0;
-const chapChars = c => c.chars ??= c.blocks.reduce((s, b) => s + b.x.length, 0);
+const chapChars = c => c.chars ??= c.blocks.reduce((s, b) => s + (b.x || '').length + (b.k === 'img' ? 400 : 0), 0);
 function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, !!prefs.indent, pg.classList.contains('sidegap'), scrollMode() ? 'scroll' : 'paged', fontGen].join('|'); }
 function ensurePageCounts(){
   /* page counts only make sense for Paged mode: in Scrolling mode every chapter would measure as 1 page,
@@ -1507,7 +1558,7 @@ function ensurePageCounts(){
     const t0 = performance.now();
     while (i < cur.chapters.length && performance.now() - t0 < 40) {
       mp.replaceChildren();
-      cur.chapters[i].blocks.forEach(b => mp.append(el(b.k === 'h' ? 'h2' : 'p', null, b.x)));
+      cur.chapters[i].blocks.forEach(b => mp.append(blockEl(b, false)));
       if (i === cur.chapters.length - 1) { const end = el('div', 'endnote'); end.append(el('p', null, t('endBook'))); mp.append(end); }
       const last = mp.lastElementChild, rs = last ? last.getClientRects() : [];
       cur.pageCounts[i] = rs.length ? pageOfRect(rs[rs.length - 1], mp.getBoundingClientRect().left) + 1 : 1;
@@ -1854,7 +1905,7 @@ function enqueue(budget){
   while (used < budget && tts.next) {
     const { ch, para } = tts.next;
     const blocks = cur.chapters[ch].blocks;
-    for (const part of chunksOf(blocks[para].x)) {
+    for (const part of chunksOf(blocks[para].x || '')) {
       const u = new SpeechSynthesisUtterance(part.s);
       if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = lang === 'vi' ? 'vi-VN' : lang === 'en' ? 'en-US' : '';
       u.rate = prefs.rate;
