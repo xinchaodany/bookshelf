@@ -432,6 +432,8 @@ body.scrollmode .vp{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow
 body.scrollmode .page{height:auto;column-width:auto !important;column-count:1;column-gap:0 !important;padding-bottom:28px;transform:none !important}
 body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
 .chapnav{display:flex;justify-content:center;padding:18px 0;font-family:var(--ui);font-size:14px}
+.chapnav.prev{justify-content:flex-start}
+.chapnav.next{justify-content:flex-end}
 .chapnav .btn{border-color:var(--rink);color:var(--rink);background:var(--rbg)}
 </style>
 </head>
@@ -612,7 +614,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress', sStarred:'To-read', star:'Add to To-read', unstar:'Remove from To-read',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as Finished', readMode:'Page style', mFlip:'Paged', mScroll:'Scrolling', prevChap:'Previous chapter', nextChap:'Next chapter', viewCovers:'Covers only', status:'Mark as', nowHide:'Remove from Continue reading', stUnread:'Unread', stReading:'Reading', stRead:'Read', readingPct:'{p}%', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as Finished', readMode:'Page style', mFlip:'Paged', mScroll:'Scrolling', prevChap:'Previous Chapter', nextChap:'Next Chapter', viewCovers:'Covers only', status:'Mark as', nowHide:'Remove from Continue reading', stUnread:'Unread', stReading:'Reading', stRead:'Read', readingPct:'{p}%', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -1412,8 +1414,8 @@ function renderChapter(i, anchor = 0, off = 0){
   cur.chapters[cur.ch].blocks.forEach((b, j) => { const e = el(b.k === 'h' ? 'h2' : 'p', null, b.x); e.dataset.i = j; pg.append(e); });
   if (scrollMode()) {
     /* in Scroll mode each chapter is one long page, with buttons to move between chapters */
-    if (cur.ch > 0) { const n = el('div', 'chapnav'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('prevChap'), 'arrow-left-line'); b.onclick = () => { renderChapter(cur.ch - 1, 'end'); saveProgress(true); }; n.append(b); pg.prepend(n); }
-    if (cur.ch < cur.chapters.length - 1) { const n = el('div', 'chapnav'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('nextChap'), 'arrow-right-line', true); b.onclick = () => { renderChapter(cur.ch + 1, 0); saveProgress(true); }; n.append(b); pg.append(n); }
+    if (cur.ch > 0) { const n = el('div', 'chapnav prev'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('prevChap'), 'arrow-left-line'); b.onclick = () => { renderChapter(cur.ch - 1, 'end'); saveProgress(true); }; n.append(b); pg.prepend(n); }
+    if (cur.ch < cur.chapters.length - 1) { const n = el('div', 'chapnav next'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('nextChap'), 'arrow-right-line', true); b.onclick = () => { renderChapter(cur.ch + 1, 0); saveProgress(true); }; n.append(b); pg.append(n); }
   }
   if (cur.ch === cur.chapters.length - 1) {
     const end = el('div', 'endnote'); end.append(el('p', null, t('endBook')));
