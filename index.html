@@ -427,6 +427,12 @@ dialog{border-radius:28px 28px 0 0}
 #libraryView[data-mode="covers"] .cell .thumb .tt{font-size:11px}
 #libraryView[data-mode="covers"] .nowgrid{grid-auto-columns:min(calc((100% - 30px) / 4 * 1.3), 130px);gap:10px}
 .cell .copen{-webkit-touch-callout:none;user-select:none}
+/* Scroll read mode */
+body.scrollmode .vp{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+body.scrollmode .page{height:auto;column-width:auto !important;column-count:1;column-gap:0 !important;padding-bottom:28px;transform:none !important}
+body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
+.chapnav{display:flex;justify-content:center;padding:18px 0;font-family:var(--ui);font-size:14px}
+.chapnav .btn{border-color:var(--rink);color:var(--rink);background:var(--rbg)}
 </style>
 </head>
 <body data-view="library">
@@ -569,7 +575,7 @@ dialog{border-radius:28px 28px 0 0}
       <div class="seg" role="group" id="rtSeg">
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button><button type="button" data-rt="soft" data-i="tSoft"></button>
       </div></div>
-    <label class="field"><span data-i="barMsg"></span><input id="msgIn" maxlength="40" autocomplete="off" data-ip="barMsgPh"></label>
+    <div class="srow"><span class="slabel" data-i="readMode"></span><div class="seg" role="group" id="modeSeg"><button type="button" data-mode="flip" data-i="mFlip"></button><button type="button" data-mode="scroll" data-i="mScroll"></button></div></div>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="srow" hidden><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
     <div class="srow" hidden><span class="slabel" data-i="appSize"></span>
@@ -606,7 +612,7 @@ const I18N = {
     noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress', sStarred:'To-read', star:'Add to To-read', unstar:'Remove from To-read',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
-    fTags:'Tags, separated by commas', markRead:'Mark as Finished', viewCovers:'Covers only', status:'Mark as', nowHide:'Remove from Continue reading', stUnread:'Unread', stReading:'Reading', stRead:'Read', readingPct:'{p}%', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
+    fTags:'Tags, separated by commas', markRead:'Mark as Finished', readMode:'Read mode', mFlip:'Flip page', mScroll:'Scroll', prevChap:'Previous chapter', nextChap:'Next chapter', viewCovers:'Covers only', status:'Mark as', nowHide:'Remove from Continue reading', stUnread:'Unread', stReading:'Reading', stRead:'Read', readingPct:'{p}%', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
     save:'Save', cancel:'Cancel', del:'Remove from library', delConfirm:'Tap again to remove', saved:'Details saved', deleted:'Removed from library. Your original file wasn’t touched.',
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
@@ -1334,6 +1340,8 @@ function applyPrefs(){
   $('#boldBtn').setAttribute('aria-pressed', prefs.bold);
   $('#indentBtn').setAttribute('aria-pressed', !!prefs.indent);
   pg.classList.toggle('indent', !!prefs.indent);
+  document.body.classList.toggle('scrollmode', scrollMode());
+  document.querySelectorAll('#modeSeg [data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === (scrollMode() ? 'scroll' : 'flip')));
   document.body.dataset.rt = prefs.rt;
   /* Theme applies to the whole app: Auto follows the device, Light / Dark override it */
   if (prefs.rt === 'paper') document.documentElement.dataset.theme = 'light';
@@ -1352,6 +1360,15 @@ document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
 });
 $('#boldBtn').onclick = () => { prefs.bold = !prefs.bold; savePrefs(); applyPrefs(); };
 $('#indentBtn').onclick = () => { prefs.indent = !prefs.indent; savePrefs(); applyPrefs(); };
+/* Read mode: Flip page (pages side by side) or Scroll (one long chapter you scroll through) */
+const scrollMode = () => prefs.mode === 'scroll';
+prefs.msg = ''; /* side message option removed */
+document.querySelectorAll('#modeSeg [data-mode]').forEach(b => b.onclick = () => {
+  if ((scrollMode() ? 'scroll' : 'flip') === b.dataset.mode) return;
+  const a = cur ? cur.anchor : 0, o = cur ? cur.anchorOff : 0;
+  prefs.mode = b.dataset.mode; savePrefs(); applyPrefs();
+  if (cur) renderChapter(cur.ch, a, o);
+});
 $('#rtSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; prefs.rt = b.dataset.rt; savePrefs(); applyPrefs(); };
 $('#fontInput').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await addFont(f); };
 
@@ -1393,6 +1410,11 @@ function renderChapter(i, anchor = 0, off = 0){
   cur.ch = Math.max(0, Math.min(i, cur.chapters.length - 1));
   pg.replaceChildren();
   cur.chapters[cur.ch].blocks.forEach((b, j) => { const e = el(b.k === 'h' ? 'h2' : 'p', null, b.x); e.dataset.i = j; pg.append(e); });
+  if (scrollMode()) {
+    /* in Scroll mode each chapter is one long page, with buttons to move between chapters */
+    if (cur.ch > 0) { const n = el('div', 'chapnav'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('prevChap'), 'arrow-left-line'); b.onclick = () => { renderChapter(cur.ch - 1, 'end'); saveProgress(true); }; n.append(b); pg.prepend(n); }
+    if (cur.ch < cur.chapters.length - 1) { const n = el('div', 'chapnav'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('nextChap'), 'arrow-right-line', true); b.onclick = () => { renderChapter(cur.ch + 1, 0); saveProgress(true); }; n.append(b); pg.append(n); }
+  }
   if (cur.ch === cur.chapters.length - 1) {
     const end = el('div', 'endnote'); end.append(el('p', null, t('endBook')));
     const nx = nextInSeries();
@@ -1447,6 +1469,8 @@ function layout(anchor, off = 0){
   pg.style.setProperty('--pw', W + 'px');
   /* text uses the full width (up to the app's 824pt maximum = Palma height), with only your Margins setting at the sides */
   pg.style.setProperty('--mx', prefs.mx + 'px');
+  if (scrollMode()) return layoutScroll(anchor, off);
+  vp.scrollTop = 0;
   pg.style.transform = 'none';
   const last = pg.lastElementChild; const rs = last ? last.getClientRects() : [];
   pageCount = rs.length ? pageOfRect(rs[rs.length - 1], pg.getBoundingClientRect().left) + 1 : 1;
@@ -1522,7 +1546,50 @@ function slide(from, to){
   pg.getAnimations().forEach(a => a.cancel());
   pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration: 220, easing: 'cubic-bezier(.25,.8,.3,1)' });
 }
+/* ---- Scroll mode ---- */
+function layoutScroll(anchor, off){
+  pg.style.transform = 'none'; pageCount = 1; curPage = 0;
+  let y = 0;
+  if (anchor === 'end') y = vp.scrollHeight;
+  else if (anchor > 0 || off > 0) {
+    const e = paras()[anchor];
+    if (e) {
+      y = e.offsetTop;
+      const node = e.firstChild;
+      if (off > 0 && node && node.nodeType === 3 && node.length) {
+        const r = document.createRange(), o = Math.min(off, node.length - 1); r.setStart(node, o); r.setEnd(node, o + 1);
+        const rc = r.getClientRects()[0]; if (rc) y += rc.top - e.getBoundingClientRect().top;
+      }
+    }
+  }
+  vp.scrollTop = Math.max(0, y - 12);
+  noteScroll(false);
+  ensurePageCounts();
+}
+function noteScroll(now){
+  if (!cur || !scrollMode()) return;
+  /* reading line = 14pt below the top edge, matching the 12pt lead-in used when restoring a position */
+  const top = vp.getBoundingClientRect().top + 14, ps = paras();
+  let j = 0;
+  for (; j < ps.length; j++) if (ps[j].getBoundingClientRect().bottom > top) break;
+  if (j >= ps.length) j = Math.max(0, ps.length - 1);
+  let off = 0; const e = ps[j], node = e && e.firstChild;
+  if (e && node && node.nodeType === 3 && node.length && e.getBoundingClientRect().top < top) {
+    const r = document.createRange(); let lo = 0, hi = node.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; r.setStart(node, mid); r.setEnd(node, mid + 1); const rc = r.getClientRects()[0]; if (rc && rc.bottom > top) hi = mid; else lo = mid + 1; }
+    off = lo;
+  }
+  cur.anchor = j; cur.anchorOff = off;
+  updateStatus(); saveProgress(now);
+}
+let scrollT;
+vp.addEventListener('scroll', () => { if (!scrollMode()) return; clearTimeout(scrollT); scrollT = setTimeout(() => noteScroll(false), 200); }, { passive: true });
 function bookPct(){
+  if (scrollMode() && cur) {
+    const max = vp.scrollHeight - vp.clientHeight, f = max > 0 ? Math.min(1, vp.scrollTop / max) : 1;
+    if (cur.ch === cur.chapters.length - 1 && f >= 0.99) return 100;
+    return (cur.ch + f) / cur.chapters.length * 100;
+  }
   const atEnd = cur.ch === cur.chapters.length - 1 && curPage === pageCount - 1;
   if (atEnd) return 100;
   const bp = bookPages();
@@ -1547,11 +1614,17 @@ function updateStatus(){
   const msg = ' · ' + cur.meta.title;
   if ($('#stTitle').textContent !== msg) $('#stTitle').textContent = msg;
   const bp = bookPages();
-  const txt = (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
+  const txt = scrollMode() ? Math.floor(bookPct()) + '%' : (pp.exact ? '' : '~') + pp.page + '/' + pp.total;
   $('#sProg').style.setProperty('--p', Math.max(0, Math.min(1, bookPct() / 100)));
   if ($('#stPage').textContent !== txt) $('#stPage').textContent = txt;
 }
 function turn(dir){
+  if (scrollMode()) {
+    const step = vp.clientHeight * 0.9, atBottom = vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 2, atTop = vp.scrollTop <= 1;
+    if (dir > 0) { if (!atBottom) vp.scrollBy({ top: step }); else if (cur.ch < cur.chapters.length - 1) renderChapter(cur.ch + 1, 0); }
+    else { if (!atTop) vp.scrollBy({ top: -step }); else if (cur.ch > 0) renderChapter(cur.ch - 1, 'end'); }
+    return;
+  }
   if (dir > 0) {
     if (curPage < pageCount - 1) goPage(curPage + 1, 1);
     else if (cur.ch < cur.chapters.length - 1) { renderChapter(cur.ch + 1, 0); slide(-curPage * W + W, -curPage * W); }
@@ -1570,7 +1643,7 @@ function saveProgress(now){
     if (!cur) return;
     const p = (tts.on && tts.para != null) ? tts.para : cur.anchor;
     const bp = bookPages();
-    cur.meta.progress = { ch: cur.ch, p, off: (tts.on && tts.para != null) ? 0 : (cur.anchorOff || 0), pct: bookPct(), chTitle: chapTitle(cur.ch), page: bp.page, total: bp.total };
+    cur.meta.progress = { ch: cur.ch, p, off: (tts.on && tts.para != null) ? 0 : (cur.anchorOff || 0), pct: bookPct(), chTitle: chapTitle(cur.ch), page: scrollMode() ? null : bp.page, total: scrollMode() ? null : bp.total };
     idbPut('meta', cur.meta).catch(() => {});
   };
   clearTimeout(saveTimer);
@@ -1606,12 +1679,13 @@ vp.addEventListener('touchstart', e => { const p = e.touches[0]; swipeStart = { 
 vp.addEventListener('touchend', e => {
   if (!swipeStart) return;
   const p = e.changedTouches[0]; const dx = p.clientX - swipeStart.x, dy = p.clientY - swipeStart.y; swipeStart = null;
-  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { swiped = true; turn(dx < 0 ? 1 : -1); }
+  if (!scrollMode() && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { swiped = true; turn(dx < 0 ? 1 : -1); }
 });
 vp.addEventListener('click', e => {
   if (swiped) { swiped = false; return; }
   if (e.target.closest('button,a')) return;
   if (String(getSelection())) return;
+  if (scrollMode()) { const p = e.target.closest('[data-i]'); if (tts.on && p) ttsPlay(+p.dataset.i); else showChrome(true); return; }
   const x = e.clientX / innerWidth;
   if (x < 0.3) turn(-1);
   else if (x > 0.7) turn(1);
@@ -1620,8 +1694,6 @@ vp.addEventListener('click', e => {
     if (tts.on && p) ttsPlay(+p.dataset.i); else showChrome(true);
   }
 });
-/* Bottom bar message, typed in Reading settings */
-$('#msgIn').oninput = e => { prefs.msg = e.target.value; savePrefs(); updateStatus(); };
 let fabOpen = false;
 function updateFab(){
   const f = $('#ttsFab'); if (!f) return;
@@ -1650,7 +1722,6 @@ $('#menuBtn').onclick = () => showChrome(true);
 $('#backBtn').onclick = closeReader;
 $('#setBtn').onclick = () => {
   showChrome(false); $('#hintRow').hidden = store.get('hintSeen', false);
-  $('#msgIn').value = prefs.msg || '';
   if (cur) updateVoices(); /* pick up voices installed since the app opened */
   const mode = document.fullscreenElement ? 'fullscreen (browser)' : (['fullscreen', 'standalone', 'minimal-ui'].find(m => matchMedia('(display-mode: ' + m + ')').matches) || 'browser');
   $('#dispMode').textContent = t('displayMode', { m: mode });
@@ -1802,7 +1873,7 @@ function onUttStart(my, ch, para, off){
   tts.errors = 0;
   if (ch !== cur.ch) { renderChapter(ch, para); updateMedia(); }
   if (tts.para !== para || !pg.querySelector('.reading')) { tts.para = para; highlight(para); saveProgress(); }
-  if (!document.hidden) showOffset(paras()[para], off);
+  if (!document.hidden) { if (scrollMode()) paras()[para]?.scrollIntoView({ block: 'center' }); else showOffset(paras()[para], off); }
 }
 function onUttEnd(my, len){
   if (my !== tts.token || !tts.on) return;
