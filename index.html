@@ -1485,13 +1485,15 @@ function layout(anchor, off = 0){
    screen size and reading settings; the result is saved so it's instant next time. */
 let measureToken = 0, fontGen = 0;
 const chapChars = c => c.chars ??= c.blocks.reduce((s, b) => s + b.x.length, 0);
-function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, !!prefs.indent, pg.classList.contains('sidegap'), fontGen].join('|'); }
+function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, !!prefs.indent, pg.classList.contains('sidegap'), scrollMode() ? 'scroll' : 'paged', fontGen].join('|'); }
 function ensurePageCounts(){
-  if (!cur) return;
+  /* page counts only make sense for Paged mode: in Scrolling mode every chapter would measure as 1 page,
+     and those wrong counts used to be saved and then shown as a far-too-small book total in Paged mode */
+  if (!cur || scrollMode()) return;
   const sig = layoutSig();
   if (cur.pageSig === sig) return;
   cur.pageSig = sig;
-  const id = cur.meta.id, saved = store.get('pages-' + id, null);
+  const id = cur.meta.id, saved = store.get('pages2-' + id, null);
   if (saved && saved.sig === sig && saved.counts.length === cur.chapters.length) { cur.pageCounts = saved.counts; updateStatus(); return; }
   cur.pageCounts = new Array(cur.chapters.length).fill(null);
   const my = ++measureToken;
@@ -1513,7 +1515,7 @@ function ensurePageCounts(){
     }
     updateStatus();
     if (i < cur.chapters.length) setTimeout(step, 30);
-    else { box.remove(); store.set('pages-' + id, { sig, counts: cur.pageCounts }); }
+    else { box.remove(); store.set('pages2-' + id, { sig, counts: cur.pageCounts }); }
   };
   setTimeout(step, 60);
 }
