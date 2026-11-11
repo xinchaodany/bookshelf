@@ -1414,8 +1414,8 @@ function renderChapter(i, anchor = 0, off = 0){
   cur.chapters[cur.ch].blocks.forEach((b, j) => { const e = el(b.k === 'h' ? 'h2' : 'p', null, b.x); e.dataset.i = j; pg.append(e); });
   if (scrollMode()) {
     /* in Scroll mode each chapter is one long page, with buttons to move between chapters */
-    if (cur.ch > 0) { const n = el('div', 'chapnav prev'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('prevChap'), 'arrow-left-line'); b.onclick = () => { renderChapter(cur.ch - 1, 'end'); saveProgress(true); }; n.append(b); pg.prepend(n); }
-    if (cur.ch < cur.chapters.length - 1) { const n = el('div', 'chapnav next'), b = el('button', 'btn'); b.type = 'button'; setLabel(b, t('nextChap'), 'arrow-right-line', true); b.onclick = () => { renderChapter(cur.ch + 1, 0); saveProgress(true); }; n.append(b); pg.append(n); }
+    if (cur.ch > 0) { const n = el('div', 'chapnav prev'), b = el('button', 'btn icon'); b.type = 'button'; b.append(icon('arrow-left-line')); b.setAttribute('aria-label', t('prevChap')); b.title = t('prevChap'); b.onclick = () => { renderChapter(cur.ch - 1, 'end'); saveProgress(true); }; n.append(b); pg.prepend(n); }
+    if (cur.ch < cur.chapters.length - 1) { const n = el('div', 'chapnav next'), b = el('button', 'btn icon'); b.type = 'button'; b.append(icon('arrow-right-line')); b.setAttribute('aria-label', t('nextChap')); b.title = t('nextChap'); b.onclick = () => { renderChapter(cur.ch + 1, 0); saveProgress(true); }; n.append(b); pg.append(n); }
   }
   if (cur.ch === cur.chapters.length - 1) {
     const end = el('div', 'endnote'); end.append(el('p', null, t('endBook')));
