@@ -439,6 +439,10 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
 .page figure.bimg{margin:0 0 .75em;padding:0;text-align:center;text-indent:0;break-inside:avoid;line-height:0}
 .page figure.bimg img{display:inline-block;width:auto;height:auto;max-width:100%;max-height:var(--colh,70vh);object-fit:contain}
 .page figure.bimg.speaking img{outline:3px solid var(--rhl);outline-offset:2px}
+/* little pictures inside a line of text (arrows, symbols): text-sized */
+.page img.icon{display:inline-block;height:1.15em;width:auto;max-width:3em;vertical-align:-0.2em;object-fit:contain}
+.page img.icon.pre{margin-right:.3em}
+.page img.icon.post{margin-left:.3em}
 </style>
 </head>
 <body data-view="library">
@@ -766,21 +770,47 @@ function parsePlain(text, md){
   return splitBig(chapters);
 }
 const BLOCK_SEL = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,dt,dd,figcaption,td';
+/* a picture's source plus any size the book itself gives it (width/height attribute or inline style) */
+function imgInfo(e, base){
+  const isImg = e.localName.toLowerCase() === 'img';
+  const src = (e.getAttribute('src') || e.getAttribute('href') || e.getAttribute('xlink:href') || e.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '').trim();
+  if (!src || /^(https?:)?\/\//i.test(src)) return null;
+  const st = e.getAttribute('style') || '';
+  const dim = n => {
+    if (!isImg) return '';
+    const m = st.match(new RegExp('(?:^|;)\\s*' + n + '\\s*:\\s*([\\d.]+)(px|em|rem)', 'i')); if (m) return m[1] + m[2];
+    const a = (e.getAttribute(n) || '').trim(); return /^\d+(\.\d+)?$/.test(a) ? a + 'px' : '';
+  };
+  const o = { s: src.startsWith('data:') ? src : joinPath(base, src), a: (e.getAttribute('alt') || '').trim() };
+  const dw = dim('width'), dh = dim('height'); if (dw) o.dw = dw; else if (dh) o.dh = dh;
+  return o;
+}
 function extractBlocks(doc, imgBase){
   const body = doc.body || doc.documentElement; const out = [];
   if (!body) return out;
   body.querySelectorAll('script,style,noscript').forEach(n => n.remove());
-  /* with imgBase (EPUB chapters), pictures are kept in reading order as {k:'img'} blocks */
+  /* with imgBase (EPUB chapters), pictures are kept in reading order as {k:'img'} blocks;
+     small pictures sitting inside a line of text (arrows, symbols) stay with that paragraph as little icons */
   body.querySelectorAll(imgBase != null ? BLOCK_SEL + ',img,image' : BLOCK_SEL).forEach(e => {
     const ln = e.localName.toLowerCase();
     if (ln === 'img' || ln === 'image') {
-      const src = (e.getAttribute('src') || e.getAttribute('href') || e.getAttribute('xlink:href') || e.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '').trim();
-      if (src && !/^(https?:)?\/\//i.test(src)) out.push({ k: 'img', x: '', s: src.startsWith('data:') ? src : joinPath(imgBase, src), a: (e.getAttribute('alt') || '').trim() });
+      const host = e.closest(BLOCK_SEL); if (host && host.textContent.trim()) return;
+      const inf = imgInfo(e, imgBase); if (inf) out.push({ k: 'img', x: '', ...inf });
       return;
     }
     if (e.parentElement && e.parentElement.closest(BLOCK_SEL)) return;
     const x = e.textContent.replace(/\s+/g, ' ').trim();
-    if (x) out.push({ k: /^h[1-6]$/i.test(e.localName) ? 'h' : 'p', x });
+    if (!x) return;
+    const blk = { k: /^h[1-6]$/i.test(e.localName) ? 'h' : 'p', x };
+    if (imgBase != null) {
+      const full = e.textContent.trim().length;
+      for (const im of e.querySelectorAll('img,image')) {
+        const inf = imgInfo(im, imgBase); if (!inf) continue;
+        const r = doc.createRange(); r.setStart(e, 0); r.setEndBefore(im);
+        (r.toString().trim().length <= full / 2 ? (blk.pre ||= []) : (blk.post ||= [])).push(inf);
+      }
+    }
+    out.push(blk);
   });
   if (!out.length) (body.innerText || body.textContent || '').split(/\n+/).map(s => s.replace(/\s+/g,' ').trim()).filter(Boolean).forEach(x => out.push({k:'p', x}));
   return out;
@@ -859,8 +889,9 @@ async function parseEpub(buf){
   const typeOf = {}; for (const m of Object.values(manifest)) typeOf[m.href] = m.type;
   const extType = p => ({ jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp' })[(p.split('.').pop() || '').toLowerCase()] || '';
   const images = {}, dims = {};
-  for (const c of chapters) for (const b of c.blocks) {
-    if (b.k !== 'img' || b.s.startsWith('data:') || b.s in images) continue;
+  const refs = blk => blk.k === 'img' ? [blk] : [...(blk.pre || []), ...(blk.post || [])];
+  for (const c of chapters) for (const blk of c.blocks) for (const b of refs(blk)) {
+    if (b.s.startsWith('data:') || b.s in images) continue;
     images[b.s] = null;
     const f = zip.file(b.s); if (!f) continue;
     try {
@@ -872,6 +903,7 @@ async function parseEpub(buf){
   for (const c of chapters) {
     c.blocks = c.blocks.filter(b => b.k !== 'img' || b.s.startsWith('data:') || images[b.s]);
     for (const b of c.blocks) if (b.k === 'img' && dims[b.s]) { b.w = dims[b.s][0]; b.h = dims[b.s][1]; }
+    for (const b of c.blocks) for (const k of ['pre', 'post']) if (b[k]) { b[k] = b[k].filter(i => i.s.startsWith('data:') || images[i.s]); if (!b[k].length) delete b[k]; }
   }
   for (const k of Object.keys(images)) if (!images[k]) delete images[k];
   for (let i = chapters.length - 1; i >= 0; i--) if (!chapters[i].blocks.length) chapters.splice(i, 1);
@@ -1420,16 +1452,28 @@ function imgUrl(s){
   return cur.imgUrls[s] || '';
 }
 function releaseImgs(){ if (cur && cur.imgUrls) { Object.values(cur.imgUrls).forEach(u => URL.revokeObjectURL(u)); cur.imgUrls = {}; } }
+function iconEl(i, live, cls){
+  const im = document.createElement('img'); im.className = 'icon ' + cls; im.alt = i.a || ''; im.decoding = 'async';
+  if (live) im.onload = im.onerror = () => relayout();
+  im.src = imgUrl(i.s); return im;
+}
 function blockEl(b, live){
   if (b.k === 'img') {
     const f = el('figure', 'bimg'), im = document.createElement('img');
     im.alt = b.a || ''; im.decoding = 'async';
     if (b.w && b.h) { im.width = b.w; im.height = b.h; }
+    /* the book's own size for the picture (e.g. a small ornament), otherwise its natural size, never bigger */
+    if (b.dw) im.style.width = b.dw; else if (b.dh) im.style.height = b.dh;
     if (live) im.onload = im.onerror = () => relayout();
     im.src = imgUrl(b.s); f.append(im); return f;
   }
-  return el(b.k === 'h' ? 'h2' : 'p', null, b.x);
+  const p = el(b.k === 'h' ? 'h2' : 'p', null, b.x), tn = p.firstChild;
+  (b.pre || []).forEach(i => p.insertBefore(iconEl(i, live, 'pre'), tn));
+  (b.post || []).forEach(i => p.append(iconEl(i, live, 'post')));
+  return p;
 }
+/* the paragraph's text node (pictures inside a paragraph sit before or after it) */
+function txtNode(e){ if (e) for (const n of e.childNodes) if (n.nodeType === 3) return n; return null; }
 async function openBook(id){
   const meta = await idbGet('meta', id), content = await idbGet('content', id);
   if (!meta || !content) return;
@@ -1493,7 +1537,7 @@ function firstVisible(){
    so a long paragraph spanning several pages reopens on the right page */
 function pageAt(e, off){
   if (!e) return 0;
-  const left = pg.getBoundingClientRect().left, node = e.firstChild;
+  const left = pg.getBoundingClientRect().left, node = txtNode(e);
   if (off > 0 && node && node.nodeType === 3 && node.length) {
     const o = Math.min(off, node.length - 1), r = document.createRange();
     r.setStart(node, o); r.setEnd(node, o + 1);
@@ -1505,7 +1549,7 @@ function firstOffset(j){
   const e = paras()[j]; if (!e) return 0;
   const left = pg.getBoundingClientRect().left, rs = e.getClientRects();
   if (!rs.length || pageOfRect(rs[0], left) >= curPage) return 0;
-  const node = e.firstChild; if (!node || node.nodeType !== 3 || !node.length) return 0;
+  const node = txtNode(e); if (!node || node.nodeType !== 3 || !node.length) return 0;
   const r = document.createRange(); let lo = 0, hi = node.length - 1;
   while (lo < hi) {
     const mid = (lo + hi) >> 1; r.setStart(node, mid); r.setEnd(node, mid + 1);
@@ -1610,7 +1654,7 @@ function layoutScroll(anchor, off){
     const e = paras()[anchor];
     if (e) {
       y = e.offsetTop;
-      const node = e.firstChild;
+      const node = txtNode(e);
       if (off > 0 && node && node.nodeType === 3 && node.length) {
         const r = document.createRange(), o = Math.min(off, node.length - 1); r.setStart(node, o); r.setEnd(node, o + 1);
         const rc = r.getClientRects()[0]; if (rc) y += rc.top - e.getBoundingClientRect().top;
@@ -1628,7 +1672,7 @@ function noteScroll(now){
   let j = 0;
   for (; j < ps.length; j++) if (ps[j].getBoundingClientRect().bottom > top) break;
   if (j >= ps.length) j = Math.max(0, ps.length - 1);
-  let off = 0; const e = ps[j], node = e && e.firstChild;
+  let off = 0; const e = ps[j], node = e && txtNode(e);
   if (e && node && node.nodeType === 3 && node.length && e.getBoundingClientRect().top < top) {
     const r = document.createRange(); let lo = 0, hi = node.length - 1;
     while (lo < hi) { const mid = (lo + hi) >> 1; r.setStart(node, mid); r.setEnd(node, mid + 1); const rc = r.getClientRects()[0]; if (rc && rc.bottom > top) hi = mid; else lo = mid + 1; }
@@ -1877,7 +1921,7 @@ function highlight(i){
   if (i != null) paras()[i]?.classList.add('reading');
 }
 function showOffset(e, off){
-  const node = e.firstChild; if (!node || node.nodeType !== 3) return;
+  const node = txtNode(e); if (!node || node.nodeType !== 3) return;
   try {
     const r = document.createRange(); r.setStart(node, Math.min(off, node.length - 1)); r.setEnd(node, Math.min(off + 1, node.length));
     const rect = r.getClientRects()[0]; if (!rect) return;

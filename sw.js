@@ -1,5 +1,5 @@
 // Offline cache for Bookshelf. Bump VERSION when you change any file.
-const VERSION = 'bookshelf-v134';
+const VERSION = 'bookshelf-v135';
 const CORE = ['./', './index.html', './jszip.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon.svg', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
