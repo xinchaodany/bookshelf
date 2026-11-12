@@ -179,7 +179,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .vp{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:calc(32.3px + env(safe-area-inset-bottom,0px));overflow:hidden;background:var(--rbg);color:var(--rink);touch-action:manipulation}
 .page{height:100%;width:100%;padding:22.1px var(--mx,18.7px) 11px;
   column-width:calc(var(--pw,306px) - 2 * var(--mx,18.7px));column-gap:calc(2 * var(--mx,18.7px));column-fill:auto;
-  font-family:var(--rfont,var(--serif));font-size:var(--rsize,17px);line-height:var(--rlh,1.6);font-weight:var(--rw,400);overflow-wrap:break-word;hyphens:auto}
+  font-family:var(--rfont,var(--serif));font-size:var(--rsize,17px);line-height:var(--rlh,1.6);letter-spacing:var(--rls,0);font-weight:var(--rw,400);overflow-wrap:break-word;hyphens:auto}
 .page p{margin:0 0 .75em;orphans:2;widows:2}
 /* optional book-style paragraphs: first-line indent, no gap between paragraphs */
 .page.indent p{text-indent:1.6em;margin-bottom:.15em}
@@ -577,6 +577,8 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
       <div class="step"><button type="button" data-step="size:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="sizeOut"></output><button type="button" data-step="size:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
     <div class="srow"><span class="slabel" data-i="spacing"></span>
       <div class="step"><button type="button" data-step="lh:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="lhOut"></output><button type="button" data-step="lh:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
+    <div class="srow"><span class="slabel" data-i="letterSp"></span>
+      <div class="step"><button type="button" data-step="ls:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="lsOut"></output><button type="button" data-step="ls:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
     <div class="srow"><span class="slabel" data-i="margins"></span>
       <div class="step"><button type="button" data-step="mx:-1" aria-label="−"><i data-ic="subtract-line"></i></button><output id="mxOut"></output><button type="button" data-step="mx:1" aria-label="+"><i data-ic="add-line"></i></button></div></div>
     <div class="srow"><span class="slabel" data-i="indent"></span><button class="btn icon" type="button" id="indentBtn" data-ia="indent"><i data-ic="indent-increase"></i></button></div>
@@ -627,7 +629,7 @@ const I18N = {
     langEn:'English', langVi:'Vietnamese', langOther:'Other',
     library:'Library', chapters:'Chapters', settings:'Reading settings', close:'Close', menu:'Menu',
     font:'Font', addFont:'Upload a font (.ttf, .otf, .woff)', yourFonts:'Your fonts', remove:'Remove',
-    size:'Text size', spacing:'Line spacing', margins:'Margins', darker:'Darker text', page:'Theme',
+    size:'Text size', spacing:'Line spacing', letterSp:'Letter spacing', margins:'Margins', darker:'Darker text', page:'Theme',
     tAuto:'Auto', tPaper:'Light', tInvert:'Dark', tSoft:'Soft', uiLangLabel:'Interface language',
     sysSerif:'System serif', sysSans:'System sans-serif',
     fontHint:'Check that Vietnamese marks display correctly before choosing a font.',
@@ -1351,9 +1353,9 @@ const BUILTIN = [
   { v:'sys-serif', n:'sysSerif', css:'Georgia, "Times New Roman", serif', i:true },
   { v:'sys-sans', n:'sysSans', css:'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', i:true }
 ];
-const LIM = { size:[11, 28, 1], lh:[1.2, 2.2, 0.1], mx:[6, 38, 2], rate:[0.5, 2.5, 0.1], uiScale:[60, 120, 10] };
+const LIM = { size:[11, 28, 1], lh:[1.2, 2.2, 0.1], ls:[0.8, 1.5, 0.05], mx:[6, 38, 2], rate:[0.5, 2.5, 0.1], uiScale:[60, 120, 10] };
 let userFonts = [], fontsLoaded = false;
-let prefs = Object.assign({ font:'Literata', size:17, lh:1.6, mx:19, bold:false, rt:'auto', rate:1, bg:true, fs:false, uiScale:80 }, store.get('prefs', {}));
+let prefs = Object.assign({ font:'Literata', size:17, lh:1.6, ls:1, mx:19, bold:false, rt:'auto', rate:1, bg:true, fs:false, uiScale:80 }, store.get('prefs', {}));
 if (prefs.rt === 'sepia') prefs.rt = 'paper';
 if (prefs.rt === 'night') prefs.rt = 'invert';
 prefs.bold = false; /* "Darker text" option removed */
@@ -1450,10 +1452,12 @@ function applyPrefs(){
   pg.style.setProperty('--rfont', fontCss(prefs.font));
   pg.style.setProperty('--rsize', prefs.size + 'px');
   pg.style.setProperty('--rlh', prefs.lh);
+  /* Letter spacing: 1 = the font's normal spacing; each 0.05 step adds or removes 0.0125em between letters (0.8 = a little tighter, 1.5 = airy) */
+  pg.style.setProperty('--rls', ((prefs.ls ?? 1) - 1) / 4 + 'em');
   pg.style.setProperty('--mx', prefs.mx + 'px');
   pg.style.setProperty('--rw', prefs.bold ? 550 : 400);
   const pv = $('#preview'); pv.style.fontFamily = fontCss(prefs.font); pv.style.fontWeight = prefs.bold ? 550 : 400;
-  $('#sizeOut').textContent = prefs.size; $('#lhOut').textContent = Number(prefs.lh).toFixed(1); $('#mxOut').textContent = prefs.mx;
+  $('#sizeOut').textContent = prefs.size; $('#lhOut').textContent = Number(prefs.lh).toFixed(1); $('#lsOut').textContent = Number(prefs.ls ?? 1).toFixed(2).replace(/0$/, ''); $('#mxOut').textContent = prefs.mx;
   $('#scaleOut').textContent = prefs.uiScale + '%'; applyScale();
   $('#boldBtn').setAttribute('aria-pressed', prefs.bold);
   $('#indentBtn').setAttribute('aria-pressed', !!prefs.indent);
@@ -1634,7 +1638,7 @@ function layout(anchor, off = 0){
    screen size and reading settings; the result is saved so it's instant next time. */
 let measureToken = 0, fontGen = 0;
 const chapChars = c => c.chars ??= c.blocks.reduce((s, b) => s + (b.x || '').length + (b.k === 'img' ? 400 : 0), 0);
-function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.mx, prefs.bold, !!prefs.indent, pg.classList.contains('sidegap'), scrollMode() ? 'scroll' : 'paged', fontGen].join('|'); }
+function layoutSig(){ return [vp.clientWidth, vp.clientHeight, prefs.font, prefs.size, prefs.lh, prefs.ls, prefs.mx, prefs.bold, !!prefs.indent, pg.classList.contains('sidegap'), scrollMode() ? 'scroll' : 'paged', fontGen].join('|'); }
 function ensurePageCounts(){
   /* page counts only make sense for Paged mode: in Scrolling mode every chapter would measure as 1 page,
      and those wrong counts used to be saved and then shown as a far-too-small book total in Paged mode */
