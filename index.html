@@ -771,7 +771,50 @@ function parsePlain(text, md){
 }
 const BLOCK_SEL = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,dt,dd,figcaption,td';
 /* a picture's source plus any size the book itself gives it (width/height attribute or inline style) */
-function imgInfo(e, base){
+/* The book's own stylesheets: used only to learn the size a picture is meant to have (e.g. an arrow set to 1.2em) */
+function cssRulesFrom(texts){
+  const out = [];
+  if (typeof CSSStyleSheet === 'undefined' || !CSSStyleSheet.prototype.replaceSync) return out;
+  const walk = rules => { for (const r of rules) { if (r.selectorText && r.style) out.push(r); else if (r.cssRules) walk(r.cssRules); } };
+  for (const tx of texts) { if (!tx) continue; try { const sh = new CSSStyleSheet(); sh.replaceSync(tx.replace(/@import[^;]*;/g, '')); walk(sh.cssRules); } catch {} }
+  return out;
+}
+const DIM_RE = /^[\d.]+(px|em|rem|%)$/;
+function inlineDim(e, prop){
+  const m = (e.getAttribute('style') || '').match(new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([\\d.]+(?:px|em|rem|%))', 'i'));
+  return m ? m[1] : '';
+}
+function cssDim(e, rules, prop){
+  const il = inlineDim(e, prop); if (il) return il;
+  let v = '';
+  for (const r of rules) { const val = r.style.getPropertyValue(prop); if (!val) continue; try { if (e.matches(r.selectorText)) v = val.trim(); } catch {} }
+  return DIM_RE.test(v) ? v : '';
+}
+/* width the book gives a picture: its own width, scaled by a sized wrapper (e.g. a 10%-wide box around a 100%-wide arrow) */
+function bookWidth(e, rules){
+  let w = cssDim(e, rules, 'width') || cssDim(e, rules, 'max-width');
+  if (!w || !w.endsWith('%')) return w;
+  for (let a = e.parentElement, k = 0; a && k < 4 && a.localName !== 'body'; a = a.parentElement, k++) {
+    const aw = cssDim(a, rules, 'width') || cssDim(a, rules, 'max-width');
+    if (!aw) continue;
+    const f = parseFloat(w) / 100;
+    return aw.endsWith('%') ? (parseFloat(aw) * f).toFixed(2) + '%' : f === 1 ? aw : 'calc(' + aw + ' * ' + f + ')';
+  }
+  return w === '100%' ? '' : w;
+}
+/* Does a picture look like an icon (arrow, symbol, ornament) rather than an illustration or photo?
+   Small-ish, and either largely transparent or only a couple of flat colours. */
+function iconLike(bm){
+  try {
+    if (Math.max(bm.width, bm.height) > 600) return false;
+    const n = 24, cv = document.createElement('canvas'); cv.width = cv.height = n;
+    const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(bm, 0, 0, n, n);
+    const d = cx.getImageData(0, 0, n, n).data; let clear = 0; const cols = new Set();
+    for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 24) clear++; else cols.add((d[i] >> 5) << 6 | (d[i + 1] >> 5) << 3 | (d[i + 2] >> 5)); }
+    return clear >= n * n * 0.25 || cols.size <= 3;
+  } catch { return false; }
+}
+function imgInfo(e, base, rules){
   const isImg = e.localName.toLowerCase() === 'img';
   const src = (e.getAttribute('src') || e.getAttribute('href') || e.getAttribute('xlink:href') || e.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '').trim();
   if (!src || /^(https?:)?\/\//i.test(src)) return null;
@@ -782,12 +825,15 @@ function imgInfo(e, base){
     const a = (e.getAttribute(n) || '').trim(); return /^\d+(\.\d+)?$/.test(a) ? a + 'px' : '';
   };
   const o = { s: src.startsWith('data:') ? src : joinPath(base, src), a: (e.getAttribute('alt') || '').trim() };
-  const dw = dim('width'), dh = dim('height'); if (dw) o.dw = dw; else if (dh) o.dh = dh;
+  let dw = dim('width'), dh = dim('height');
+  if (!dw && !dh && isImg && rules && rules.length) { dw = bookWidth(e, rules); if (!dw) dh = cssDim(e, rules, 'height') || cssDim(e, rules, 'max-height'); }
+  if (dw) o.dw = dw; else if (dh && !dh.endsWith('%')) o.dh = dh;
   return o;
 }
 function extractBlocks(doc, imgBase){
   const body = doc.body || doc.documentElement; const out = [];
   if (!body) return out;
+  const rules = imgBase != null ? cssRulesFrom([...doc.querySelectorAll('style')].map(s => s.textContent)) : [];
   body.querySelectorAll('script,style,noscript').forEach(n => n.remove());
   /* with imgBase (EPUB chapters), pictures are kept in reading order as {k:'img'} blocks;
      small pictures sitting inside a line of text (arrows, symbols) stay with that paragraph as little icons */
@@ -795,7 +841,7 @@ function extractBlocks(doc, imgBase){
     const ln = e.localName.toLowerCase();
     if (ln === 'img' || ln === 'image') {
       const host = e.closest(BLOCK_SEL); if (host && host.textContent.trim()) return;
-      const inf = imgInfo(e, imgBase); if (inf) out.push({ k: 'img', x: '', ...inf });
+      const inf = imgInfo(e, imgBase, rules); if (inf) out.push({ k: 'img', x: '', ...inf });
       return;
     }
     if (e.parentElement && e.parentElement.closest(BLOCK_SEL)) return;
@@ -805,7 +851,7 @@ function extractBlocks(doc, imgBase){
     if (imgBase != null) {
       const full = e.textContent.trim().length;
       for (const im of e.querySelectorAll('img,image')) {
-        const inf = imgInfo(im, imgBase); if (!inf) continue;
+        const inf = imgInfo(im, imgBase, rules); if (!inf) continue;
         const r = doc.createRange(); r.setStart(e, 0); r.setEndBefore(im);
         (r.toString().trim().length <= full / 2 ? (blk.pre ||= []) : (blk.post ||= [])).push(inf);
       }
@@ -876,12 +922,19 @@ async function parseEpub(buf){
       if (id) for (const r of metas) if (r.getAttribute('refines') === '#' + id && r.getAttribute('property') === 'group-position') seriesNo = parseFloat(r.textContent);
     }
   }
-  const chapters = [];
+  const chapters = [], cssCache = {};
   for (const ref of opf.getElementsByTagNameNS('*', 'itemref')) {
     const m = manifest[ref.getAttribute('idref')]; if (!m) continue;
     const f = zip.file(m.href); if (!f) continue;
     const doc = new DOMParser().parseFromString(await f.async('string'), 'text/html');
-    const blocks = extractBlocks(doc, m.href.includes('/') ? m.href.slice(0, m.href.lastIndexOf('/') + 1) : ''); if (!blocks.length) continue;
+    const dir = m.href.includes('/') ? m.href.slice(0, m.href.lastIndexOf('/') + 1) : '';
+    if (doc.querySelector('img,image')) for (const l of doc.querySelectorAll('link[href]')) {
+      if (!/stylesheet/i.test(l.getAttribute('rel') || '') && !/\.css$/i.test(l.getAttribute('href'))) continue;
+      const p = joinPath(dir, l.getAttribute('href'));
+      if (!(p in cssCache)) { const cf = zip.file(p); cssCache[p] = cf ? await cf.async('string').catch(() => '') : ''; }
+      if (cssCache[p]) { const s = doc.createElement('style'); s.textContent = cssCache[p]; (doc.head || doc.documentElement).append(s); }
+    }
+    const blocks = extractBlocks(doc, dir); if (!blocks.length) continue;
     const firstH = blocks.find(b => b.k === 'h');
     chapters.push({ title: labels[m.href] || (firstH ? firstH.x : ''), blocks });
   }
@@ -897,12 +950,12 @@ async function parseEpub(buf){
     try {
       const raw = await f.async('blob'), type = (typeOf[b.s] || '').startsWith('image/') ? typeOf[b.s] : extType(b.s);
       images[b.s] = type ? raw.slice(0, raw.size, type) : raw;
-      try { const bm = await createImageBitmap(images[b.s]); dims[b.s] = [bm.width, bm.height]; bm.close && bm.close(); } catch {}
+      try { const bm = await createImageBitmap(images[b.s]); dims[b.s] = [bm.width, bm.height, iconLike(bm)]; bm.close && bm.close(); } catch {}
     } catch {}
   }
   for (const c of chapters) {
     c.blocks = c.blocks.filter(b => b.k !== 'img' || b.s.startsWith('data:') || images[b.s]);
-    for (const b of c.blocks) if (b.k === 'img' && dims[b.s]) { b.w = dims[b.s][0]; b.h = dims[b.s][1]; }
+    for (const b of c.blocks) if (b.k === 'img' && dims[b.s]) { b.w = dims[b.s][0]; b.h = dims[b.s][1]; if (dims[b.s][2] && !b.dw && !b.dh) b.ic = 1; }
     for (const b of c.blocks) for (const k of ['pre', 'post']) if (b[k]) { b[k] = b[k].filter(i => i.s.startsWith('data:') || images[i.s]); if (!b[k].length) delete b[k]; }
   }
   for (const k of Object.keys(images)) if (!images[k]) delete images[k];
@@ -1464,6 +1517,7 @@ function blockEl(b, live){
     if (b.w && b.h) { im.width = b.w; im.height = b.h; }
     /* the book's own size for the picture (e.g. a small ornament), otherwise its natural size, never bigger */
     if (b.dw) im.style.width = b.dw; else if (b.dh) im.style.height = b.dh;
+    else if (b.ic) im.style.height = '2em'; /* icon-like picture (arrow, symbol) with no size given: keep it small */
     if (live) im.onload = im.onerror = () => relayout();
     im.src = imgUrl(b.s); f.append(im); return f;
   }
