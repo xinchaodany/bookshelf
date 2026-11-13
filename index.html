@@ -626,7 +626,7 @@ const I18N = {
     brand:'Bookshelf', search:'Search books', addBooks:'Add books',
     emptyTitle:'Nothing on the shelf yet',
     emptyBody:'Add EPUB, TXT, Markdown or HTML files, or a ZIP full of them. They’re saved on this device only.',
-    noMatch:'No books match “{q}”.', count:'{n} book(s) on this device', hideDone:'Hide finished ({n})', showDone:'Show finished ({n})', allDoneHidden:'All your books are finished. Tap “Show finished” to see them.',
+    noMatch:'No books match “{q}”.', count:'{n} book(s) on this device', doneOnly:'Finished only ({n})', showAll:'Show all books', countDone:'{n} finished book(s)',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress', sStarred:'To-read', star:'Add to To-read', unstar:'Remove from To-read',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
     fTags:'Tags, separated by commas', markRead:'Mark as Finished', readMode:'Page style', mFlip:'Paged', mScroll:'Scrolling', prevChap:'Previous Chapter', nextChap:'Next Chapter', viewCovers:'Covers only', status:'Mark as', nowHide:'Remove from Continue reading', stUnread:'Unread', stReading:'Reading', stRead:'Read', readingPct:'{p}%', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
@@ -1008,7 +1008,7 @@ async function refreshLibrary(){
 const skey = b => fold(b.series || '').trim();
 const byNo = (a, b) => (a.seriesNo ?? 1e9) - (b.seriesNo ?? 1e9) || a.title.localeCompare(b.title, undefined, { numeric: true });
 let openSeries = null;
-let hideDone = store.get('hideDone', false);
+let doneOnly = store.get('doneOnly', false);
 let nowIds = [];
 function seriesBooks(key){ return books.filter(b => skey(b) === key).sort(byNo); }
 let sortBy = store.get('sort', 'recent');
@@ -1046,18 +1046,20 @@ function renderLibrary(){
   $('#empty').hidden = books.length > 0;
   $('#countRow').hidden = !books.length || !!openSeries;
   $('#count').textContent = t('count', { n: books.length });
-  /* Hide / show finished books */
+  /* Finished only / Show all */
   const nDone = books.filter(b => (b.progress?.pct || 0) >= 99).length;
+  if (doneOnly && !nDone) doneOnly = false;
   $('#doneBtn').hidden = !nDone;
-  $('#doneBtn').textContent = t(hideDone ? 'showDone' : 'hideDone', { n: nDone });
-  if (hideDone) list = list.filter(b => (b.progress?.pct || 0) < 99);
+  $('#doneBtn').textContent = doneOnly ? t('showAll') : t('doneOnly', { n: nDone });
+  $('#count').textContent = doneOnly ? t('countDone', { n: nDone }) : t('count', { n: books.length });
+  if (doneOnly) list = list.filter(b => (b.progress?.pct || 0) >= 99);
   updateDupBar();
   const grid = view === 'grid' || view === 'covers';
   $('#libraryView').dataset.mode = view;
   shelf.classList.toggle('grid', grid);
   document.querySelectorAll('[data-lview]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lview === view));
   const nw = $('#nowWrap'); nw.replaceChildren();
-  const latest = (!openSeries && !q) ? books.filter(b => b.openedAt && !b.nowHidden && (b.progress?.pct || 0) < 99).sort((a, b) => b.openedAt - a.openedAt).slice(0, 3) : [];
+  const latest = (!openSeries && !q && !doneOnly) ? books.filter(b => b.openedAt && !b.nowHidden && (b.progress?.pct || 0) < 99).sort((a, b) => b.openedAt - a.openedAt).slice(0, 3) : [];
   nowIds = books.filter(b => b.openedAt && !b.nowHidden && (b.progress?.pct || 0) < 99).sort((a, b) => b.openedAt - a.openedAt).slice(0, 3).map(b => b.id);
   if (latest.length) {
     nw.append(el('h2', 'nowhead', t('nowReading')));
@@ -1071,7 +1073,7 @@ function renderLibrary(){
     list = list.filter(b => skey(b) === openSeries).sort(byNo);
   }
   $('#noMatch').hidden = !(books.length && !list.length);
-  $('#noMatch').textContent = (hideDone && !q) ? t('allDoneHidden') : t('noMatch', { q: raw });
+  $('#noMatch').textContent = t('noMatch', { q: raw });
   const shown = new Set();
   for (const b of list) {
     const k = skey(b);
@@ -2127,7 +2129,7 @@ $('#dupBtn').onclick = async () => {
   toast(t('dupRemoved', { n })); refreshLibrary();
 };
 $('#seriesBack').onclick = () => { openSeries = null; renderLibrary(); scrollTo(0, 0); };
-$('#doneBtn').onclick = () => { hideDone = !hideDone; store.set('hideDone', hideDone); renderLibrary(); };
+$('#doneBtn').onclick = () => { doneOnly = !doneOnly; store.set('doneOnly', doneOnly); renderLibrary(); scrollTo(0, 0); };
 document.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { uiLang = b.dataset.ui; store.set('ui', uiLang); applyI18n(); });
 addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
 addEventListener('drop', e => { if (!e.dataTransfer?.files.length) return; e.preventDefault(); if (!cur) addFiles([...e.dataTransfer.files]); });
