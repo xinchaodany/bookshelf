@@ -443,6 +443,11 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
 .page img.icon{display:inline-block;height:1.15em;width:auto;max-width:3em;vertical-align:-0.2em;object-fit:contain}
 .page img.icon.pre{margin-right:.3em}
 .page img.icon.post{margin-left:.3em}
+/* count line with the Hide/Show finished switch on the right */
+.countrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10.2px 13.6px 3.4px}
+.countrow .count{padding:0}
+.linkbtn{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:2px;padding:6px 0;white-space:nowrap}
+.linkbtn:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 </style>
 </head>
 <body data-view="library">
@@ -473,7 +478,7 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
     <h2 id="seriesTitle"></h2><p id="seriesCount"></p>
   </div>
   <div id="nowWrap"></div>
-  <p class="count" id="count"></p>
+  <div class="countrow" id="countRow"><p class="count" id="count"></p><button class="linkbtn" type="button" id="doneBtn"></button></div>
   <div class="dupbar" id="dupBar" hidden><span id="dupText"></span><button class="btn" type="button" id="dupBtn"><i data-ic="delete-bin-line"></i><span data-i="dupRemove"></span></button></div>
   <ul class="list" id="shelf"></ul>
   <div class="empty" id="empty" hidden>
@@ -621,7 +626,7 @@ const I18N = {
     brand:'Bookshelf', search:'Search books', addBooks:'Add books',
     emptyTitle:'Nothing on the shelf yet',
     emptyBody:'Add EPUB, TXT, Markdown or HTML files, or a ZIP full of them. They’re saved on this device only.',
-    noMatch:'No books match “{q}”.', count:'{n} book(s) on this device',
+    noMatch:'No books match “{q}”.', count:'{n} book(s) on this device', hideDone:'Hide finished ({n})', showDone:'Show finished ({n})', allDoneHidden:'All your books are finished. Tap “Show finished” to see them.',
     sortBy:'Sort by', sRecent:'Recent', sAdded:'Date added', sTitle:'Title', sAuthor:'Author', sProgress:'Progress', sStarred:'To-read', star:'Add to To-read', unstar:'Remove from To-read',
     edit:'Edit', more:'Details for “{t}”', editTitle:'Book details', fTitle:'Title', fAuthor:'Author', fLang:'Language', fDesc:'Description',
     fTags:'Tags, separated by commas', markRead:'Mark as Finished', readMode:'Page style', mFlip:'Paged', mScroll:'Scrolling', prevChap:'Previous Chapter', nextChap:'Next Chapter', viewCovers:'Covers only', status:'Mark as', nowHide:'Remove from Continue reading', stUnread:'Unread', stReading:'Reading', stRead:'Read', readingPct:'{p}%', barMsg:'Side message', barMsgPh:'Shown along the left edge while reading', indent:'Indent paragraphs', slower:'Slower', faster:'Faster', speedTo:'Speed {r}×', playback:'Read-aloud controls', tagNew:'New', seriesTag:'{d}/{n} done', view:'View', viewList:'List view', viewGrid:'Grid view', nowReading:'Continue reading', appSize:'App size', displayMode:'Display mode: {m}', noSeries:'No series', newSeries:'New series…', seriesName:'New series name', fullscreen:'Full screen', exitFullscreen:'Exit full screen', fsFailed:'Full screen isn’t available here. Open the installed app instead.', cover:'Cover', changeCover:'Choose image', removeCover:'Remove cover', coverFailed:'Couldn’t open that image', fileInfo:'File: {f} ({s}), added {d}',
@@ -1003,6 +1008,7 @@ async function refreshLibrary(){
 const skey = b => fold(b.series || '').trim();
 const byNo = (a, b) => (a.seriesNo ?? 1e9) - (b.seriesNo ?? 1e9) || a.title.localeCompare(b.title, undefined, { numeric: true });
 let openSeries = null;
+let hideDone = store.get('hideDone', false);
 let nowIds = [];
 function seriesBooks(key){ return books.filter(b => skey(b) === key).sort(byNo); }
 let sortBy = store.get('sort', 'recent');
@@ -1038,8 +1044,13 @@ function renderLibrary(){
   if (openSeries && !seriesBooks(openSeries).length) openSeries = null;
   $('#seriesHead').hidden = !openSeries;
   $('#empty').hidden = books.length > 0;
-  $('#count').hidden = !books.length || !!openSeries;
+  $('#countRow').hidden = !books.length || !!openSeries;
   $('#count').textContent = t('count', { n: books.length });
+  /* Hide / show finished books */
+  const nDone = books.filter(b => (b.progress?.pct || 0) >= 99).length;
+  $('#doneBtn').hidden = !nDone;
+  $('#doneBtn').textContent = t(hideDone ? 'showDone' : 'hideDone', { n: nDone });
+  if (hideDone) list = list.filter(b => (b.progress?.pct || 0) < 99);
   updateDupBar();
   const grid = view === 'grid' || view === 'covers';
   $('#libraryView').dataset.mode = view;
@@ -1060,7 +1071,7 @@ function renderLibrary(){
     list = list.filter(b => skey(b) === openSeries).sort(byNo);
   }
   $('#noMatch').hidden = !(books.length && !list.length);
-  $('#noMatch').textContent = t('noMatch', { q: raw });
+  $('#noMatch').textContent = (hideDone && !q) ? t('allDoneHidden') : t('noMatch', { q: raw });
   const shown = new Set();
   for (const b of list) {
     const k = skey(b);
@@ -2116,6 +2127,7 @@ $('#dupBtn').onclick = async () => {
   toast(t('dupRemoved', { n })); refreshLibrary();
 };
 $('#seriesBack').onclick = () => { openSeries = null; renderLibrary(); scrollTo(0, 0); };
+$('#doneBtn').onclick = () => { hideDone = !hideDone; store.set('hideDone', hideDone); renderLibrary(); };
 document.querySelectorAll('[data-ui]').forEach(b => b.onclick = () => { uiLang = b.dataset.ui; store.set('ui', uiLang); applyI18n(); });
 addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
 addEventListener('drop', e => { if (!e.dataTransfer?.files.length) return; e.preventDefault(); if (!cur) addFiles([...e.dataTransfer.files]); });
