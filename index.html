@@ -592,7 +592,6 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
       <div class="seg" role="group" id="rtSeg">
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button><button type="button" data-rt="soft" data-i="tSoft"></button>
       </div></div>
-    <div class="srow"><span class="slabel" data-i="volKeys"></span><div class="seg" role="group" id="volSeg"><button type="button" data-vol="off" data-i="volOff"></button><button type="button" data-vol="minus" data-i="volMinus"></button><button type="button" data-vol="plus" data-i="volPlus"></button></div></div>
     <div class="srow"><span class="slabel" data-i="readMode"></span><div class="seg" role="group" id="modeSeg"><button type="button" data-mode="flip" data-i="mFlip"></button><button type="button" data-mode="scroll" data-i="mScroll"></button></div></div>
     <label class="field"><span data-i="voice"></span><span class="selwrap"><select id="voiceSel"></select><i data-ic="arrow-down-s-line"></i></span></label>
     <div class="srow" hidden><span class="slabel" data-i="bgRead"></span><button class="btn icon" type="button" id="bgBtn" data-ia="bgRead"><i data-ic="moon-line"></i></button></div>
@@ -1476,7 +1475,6 @@ function applyPrefs(){
   $('#boldBtn').setAttribute('aria-pressed', prefs.bold);
   $('#indentBtn').setAttribute('aria-pressed', !!prefs.indent);
   pg.classList.toggle('indent', !!prefs.indent);
-  document.querySelectorAll('#volSeg [data-vol]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vol === (prefs.vol || 'minus')));
   document.body.classList.toggle('scrollmode', scrollMode());
   document.querySelectorAll('#modeSeg [data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === (scrollMode() ? 'scroll' : 'flip')));
   document.body.dataset.rt = prefs.rt;
@@ -1497,7 +1495,6 @@ document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
 });
 $('#boldBtn').onclick = () => { prefs.bold = !prefs.bold; savePrefs(); applyPrefs(); };
 $('#indentBtn').onclick = () => { prefs.indent = !prefs.indent; savePrefs(); applyPrefs(); };
-document.querySelectorAll('#volSeg [data-vol]').forEach(b => b.onclick = () => { prefs.vol = b.dataset.vol; savePrefs(); applyPrefs(); });
 /* Read mode: Flip page (pages side by side) or Scroll (one long chapter you scroll through) */
 const scrollMode = () => prefs.mode === 'scroll';
 prefs.msg = ''; /* side message option removed */
@@ -1925,17 +1922,6 @@ document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e =
 addEventListener('keydown', e => {
   if (!cur || document.querySelector('dialog[open]') || e.target.closest?.('input,select,textarea')) return;
   const k = e.key;
-  /* volume buttons, when the device passes them to the app: setting decides which one goes forward */
-  const vUp = k === 'AudioVolumeUp' || k === 'VolumeUp' || e.keyCode === 175 || e.keyCode === 24;
-  const vDown = k === 'AudioVolumeDown' || k === 'VolumeDown' || e.keyCode === 174 || e.keyCode === 25;
-  if (vUp || vDown) {
-    const mode = prefs.vol || 'minus';
-    /* while reading aloud, the volume buttons go back to changing the volume */
-    if (mode === 'off' || tts.on) return;
-    e.preventDefault();
-    turn((vDown ? 1 : -1) * (mode === 'plus' ? -1 : 1));
-    return;
-  }
   if (['ArrowRight','ArrowDown','PageDown',' '].includes(k)) { e.preventDefault(); turn(1); }
   else if (['ArrowLeft','ArrowUp','PageUp'].includes(k)) { e.preventDefault(); turn(-1); }
   else if (k === 'Escape') showChrome($('#chrome').hidden);
