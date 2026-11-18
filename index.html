@@ -1650,7 +1650,7 @@ function drawRules(){
   const frag = document.createDocumentFragment(), r = document.createRange();
   for (const p of pg.querySelectorAll(':scope > p[data-i]')) {
     const n = txtNode(p); if (!n || !n.length) continue;
-    const gap = Math.max(2, parseFloat(getComputedStyle(p).fontSize) * 0.16);
+    const gap = -parseFloat(getComputedStyle(p).fontSize) * 0.06;
     const lhPx = parseFloat(getComputedStyle(p).lineHeight) || 0;
     r.selectNodeContents(n);
     /* one text line can come back as several pieces (e.g. accents drawn from a backup font sit a little higher or lower):
@@ -1666,8 +1666,8 @@ function drawRules(){
       else lines.push({ col: q.col, top: q.top, bot: q.bot, best: q });
     }
     for (const { col, best } of lines) {
-      /* the bottom of the line itself: below the widest piece by half of the extra line spacing */
-      const y = best.bot + Math.max(gap - 2, (lhPx - (best.bot - best.top)) / 2) - 1;
+      /* just under the letters of the line (below the descenders of g, y, p) */
+      const y = best.bot + gap;
       const d = document.createElement('i');
       d.style.left = (col * W + padL) + 'px'; d.style.top = y.toFixed(1) + 'px'; d.style.width = Math.max(0, W - padL - padR) + 'px';
       frag.append(d);
