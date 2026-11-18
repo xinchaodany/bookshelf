@@ -449,12 +449,10 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
 .linkbtn{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:2px;padding:6px 0;white-space:nowrap}
 .linkbtn:focus-visible{outline:2.5px solid var(--ink);outline-offset:2px}
 /* Ruled lines: a thin, soft, dashed line under every line of text, like a notebook.
-   Two background layers sized to one line of text: a 1pt line at the bottom, then page-coloured stripes that cut it into dashes. */
-.page{--rule:color-mix(in srgb,var(--rink) 30%,var(--rbg))}
-.page.ruled p{
-  background-image:linear-gradient(to right,var(--rbg) 50%,transparent 50%),linear-gradient(to bottom,transparent calc(100% - 1px),var(--rule) calc(100% - 1px));
-  background-size:6px calc(var(--rlh,1.6) * 1em),100% calc(var(--rlh,1.6) * 1em);
-  background-repeat:repeat}
+   Drawn from the real position of each line on the page (see drawRules), so they always sit under the text. */
+.page{--rule:color-mix(in srgb,var(--rink) 30%,var(--rbg));position:relative}
+.page > .rules{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+.page > .rules i{position:absolute;display:block;height:1px;background-image:linear-gradient(to right,var(--rule) 50%,transparent 50%);background-size:6px 1px}
 </style>
 </head>
 <body data-view="library">
@@ -1640,6 +1638,35 @@ function firstOffset(j){
   }
   return lo;
 }
+/* Ruled lines: one dashed line under each real line of text (follows the text even when a line is taller,
+   e.g. accents drawn from a fallback font), spanning the full text width of its page */
+function drawRules(){
+  pg.querySelector(':scope > .rules')?.remove();
+  if (!prefs.ruled || !cur) return;
+  const pr = pg.getBoundingClientRect(), cs = getComputedStyle(pg);
+  const padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+  const W = scrollMode() ? pg.clientWidth : (parseFloat(pg.style.getPropertyValue('--pw')) || vp.getBoundingClientRect().width);
+  const layer = document.createElement('div'); layer.className = 'rules';
+  const frag = document.createDocumentFragment(), r = document.createRange();
+  for (const p of pg.querySelectorAll(':scope > p[data-i]')) {
+    const n = txtNode(p); if (!n || !n.length) continue;
+    const gap = Math.max(2, parseFloat(getComputedStyle(p).fontSize) * 0.16);
+    r.selectNodeContents(n);
+    const lines = new Map();
+    for (const q of r.getClientRects()) {
+      if (q.width < 1) continue;
+      const x = q.left - pr.left, col = scrollMode() ? 0 : Math.floor((x + 1) / W), y = q.bottom - pr.top;
+      const key = col + ':' + Math.round(q.top - pr.top), prev = lines.get(key);
+      lines.set(key, { col, y: prev ? Math.max(prev.y, y) : y });
+    }
+    for (const { col, y } of lines.values()) {
+      const d = document.createElement('i');
+      d.style.left = (col * W + padL) + 'px'; d.style.top = (y + gap).toFixed(1) + 'px'; d.style.width = Math.max(0, W - padL - padR) + 'px';
+      frag.append(d);
+    }
+  }
+  layer.append(frag); pg.append(layer);
+}
 function layout(anchor, off = 0){
   /* exact (fractional) width: rounding it made pages drift sideways on screens like the Palma's */
   W = vp.getBoundingClientRect().width || innerWidth;
@@ -1728,6 +1755,7 @@ function slide(from, to){
   pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration: 220, easing: 'cubic-bezier(.25,.8,.3,1)' });
 }
 /* ---- Scroll mode ---- */
+{ const base = layout; layout = function(anchor, off){ const r = base(anchor, off); drawRules(); return r; }; }
 function layoutScroll(anchor, off){
   pg.style.transform = 'none'; pageCount = 1; curPage = 0;
   let y = 0;
