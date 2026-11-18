@@ -1686,6 +1686,9 @@ function layout(anchor, off = 0){
   if (scrollMode()) return layoutScroll(anchor, off);
   vp.scrollTop = 0;
   pg.style.transform = 'none';
+  /* the ruled-lines layer is not part of the text: take it out before counting pages
+     (it used to be counted as the last element, giving "1 page" so a tap jumped to the next chapter) */
+  pg.querySelector(':scope > .rules')?.remove();
   const last = pg.lastElementChild; const rs = last ? last.getClientRects() : [];
   pageCount = rs.length ? pageOfRect(rs[rs.length - 1], pg.getBoundingClientRect().left) + 1 : 1;
   let n = 0;
