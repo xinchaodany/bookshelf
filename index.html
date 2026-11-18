@@ -1651,17 +1651,25 @@ function drawRules(){
   for (const p of pg.querySelectorAll(':scope > p[data-i]')) {
     const n = txtNode(p); if (!n || !n.length) continue;
     const gap = Math.max(2, parseFloat(getComputedStyle(p).fontSize) * 0.16);
+    const lhPx = parseFloat(getComputedStyle(p).lineHeight) || 0;
     r.selectNodeContents(n);
-    const lines = new Map();
-    for (const q of r.getClientRects()) {
-      if (q.width < 1) continue;
-      const x = q.left - pr.left, col = scrollMode() ? 0 : Math.floor((x + 1) / W), y = q.bottom - pr.top;
-      const key = col + ':' + Math.round(q.top - pr.top), prev = lines.get(key);
-      lines.set(key, { col, y: prev ? Math.max(prev.y, y) : y });
+    /* one text line can come back as several pieces (e.g. accents drawn from a backup font sit a little higher or lower):
+       pieces that overlap vertically in the same column are one line, and its rule follows the widest piece */
+    const parts = [...r.getClientRects()].filter(q => q.width >= 1).map(q => {
+      const x = q.left - pr.left;
+      return { col: scrollMode() ? 0 : Math.floor((x + 1) / W), top: q.top - pr.top, bot: q.bottom - pr.top, w: q.width };
+    }).sort((a, b) => a.col - b.col || (a.top + a.bot) - (b.top + b.bot));
+    const lines = [];
+    for (const q of parts) {
+      const g = lines[lines.length - 1], mid = (q.top + q.bot) / 2;
+      if (g && g.col === q.col && mid > g.top && mid < g.bot) { g.top = Math.min(g.top, q.top); g.bot = Math.max(g.bot, q.bot); if (q.w > g.best.w) g.best = q; }
+      else lines.push({ col: q.col, top: q.top, bot: q.bot, best: q });
     }
-    for (const { col, y } of lines.values()) {
+    for (const { col, best } of lines) {
+      /* the bottom of the line itself: below the widest piece by half of the extra line spacing */
+      const y = best.bot + Math.max(gap - 2, (lhPx - (best.bot - best.top)) / 2) - 1;
       const d = document.createElement('i');
-      d.style.left = (col * W + padL) + 'px'; d.style.top = (y + gap).toFixed(1) + 'px'; d.style.width = Math.max(0, W - padL - padR) + 'px';
+      d.style.left = (col * W + padL) + 'px'; d.style.top = y.toFixed(1) + 'px'; d.style.width = Math.max(0, W - padL - padR) + 'px';
       frag.append(d);
     }
   }
