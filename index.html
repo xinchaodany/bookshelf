@@ -453,12 +453,6 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
 .page{--rule:color-mix(in srgb,var(--rink) 30%,var(--rbg));position:relative}
 .page > .rules{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .page > .rules i{position:absolute;display:block;height:1px;background-image:linear-gradient(to right,var(--rule) 50%,transparent 50%);background-size:6px 1px}
-/* still copy of the old page used by the Cover and Fade page turns */
-.turnshot{position:absolute;inset:0;z-index:2;overflow:hidden;background:var(--rbg);pointer-events:none}
-.turnshot > .page{position:absolute;left:0;top:0}
-.turnshade{position:absolute;top:0;bottom:0;left:0;width:10px;z-index:3;pointer-events:none}
-.turnshade.fwd{background:linear-gradient(to left,color-mix(in srgb,var(--rink) 22%,transparent),transparent)}
-.turnshade.back{background:linear-gradient(to right,color-mix(in srgb,var(--rink) 22%,transparent),transparent)}
 /* on/off chips in Reading settings (Indent paragraphs, Ruled lines): outlined = off, filled = on */
 .chips{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 4px}
 .chips.top{padding:0 0 6px}
@@ -617,7 +611,6 @@ body.scrollmode .endnote{break-before:auto;height:auto;padding:36px 0}
         <button type="button" data-rt="auto" data-i="tAuto"></button><button type="button" data-rt="paper" data-i="tPaper"></button><button type="button" data-rt="invert" data-i="tInvert"></button><button type="button" data-rt="soft" data-i="tSoft"></button>
       </div></div>
     <div class="srow"><span class="slabel" data-i="readMode"></span><div class="seg" role="group" id="modeSeg"><button type="button" data-mode="flip" data-i="mFlip"></button><button type="button" data-mode="scroll" data-i="mScroll"></button></div></div>
-    <div class="srow" id="turnRow"><span class="slabel" data-i="turnFx"></span><div class="seg" role="group" id="turnSeg"><button type="button" data-turn="push" data-i="tPush"></button><button type="button" data-turn="cover" data-i="tCover"></button><button type="button" data-turn="fade" data-i="tFade"></button><button type="button" data-turn="none" data-i="tNone"></button></div></div>
     <div class="field"><span data-i="voice" id="voiceLbl"></span>
       <div class="voicerow"><span class="selwrap"><select id="voiceSel" aria-labelledby="voiceLbl"></select><i data-ic="arrow-down-s-line"></i></span>
         <div class="step" role="group" data-ia="speed"><button type="button" data-rate="-1" data-ia="slower"><i data-ic="subtract-line"></i></button><output id="rateSetOut"></output><button type="button" data-rate="1" data-ia="faster"><i data-ic="add-line"></i></button></div></div></div>
@@ -1505,8 +1498,6 @@ function applyPrefs(){
   pg.classList.toggle('ruled', !!prefs.ruled);
   pg.classList.toggle('indent', !!prefs.indent);
   document.body.classList.toggle('scrollmode', scrollMode());
-  $('#turnRow').hidden = scrollMode();
-  document.querySelectorAll('#turnSeg [data-turn]').forEach(b => b.setAttribute('aria-pressed', b.dataset.turn === (prefs.turn || 'push')));
   document.querySelectorAll('#modeSeg [data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === (scrollMode() ? 'scroll' : 'flip')));
   document.body.dataset.rt = prefs.rt;
   /* Theme applies to the whole app: Auto follows the device, Light / Dark override it */
@@ -1527,7 +1518,6 @@ document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
 $('#boldBtn').onclick = () => { prefs.bold = !prefs.bold; savePrefs(); applyPrefs(); };
 $('#indentBtn').onclick = () => { prefs.indent = !prefs.indent; savePrefs(); applyPrefs(); };
 $('#ruledBtn').onclick = () => { prefs.ruled = !prefs.ruled; savePrefs(); applyPrefs(); };
-document.querySelectorAll('#turnSeg [data-turn]').forEach(b => b.onclick = () => { prefs.turn = b.dataset.turn; savePrefs(); applyPrefs(); });
 /* Read mode: Flip page (pages side by side) or Scroll (one long chapter you scroll through) */
 const scrollMode = () => prefs.mode === 'scroll';
 prefs.msg = ''; /* side message option removed */
@@ -1783,37 +1773,11 @@ function goPage(n, dir){
   if (dir && from !== to) slide(from, to);
   updateStatus(); saveProgress();
 }
-/* Page turn animation (Paged mode), chosen in Aa:
-   Push  – the new page pushes the old one off the screen (both move together)
-   Cover – the new page slides in over the old one, which stays still underneath
-   Fade  – the old page fades away to reveal the new one
-   None  – instant */
+/* Page turn: the new page pushes the old one off the screen (both move together) */
 function slide(from, to){
-  vp.querySelectorAll('.turnshot,.turnshade').forEach(x => x.remove());
   if (!pg.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   pg.getAnimations().forEach(a => a.cancel());
-  const mode = prefs.turn || 'push', opt = { duration: 300, easing: 'ease-in-out' };
-  if (mode === 'none') return;
-  if (mode === 'push') { pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], opt); return; }
-  /* a still picture of the old page, laid over the new one */
-  const shot = document.createElement('div'); shot.className = 'turnshot'; shot.setAttribute('aria-hidden', 'true');
-  const c = pg.cloneNode(true); c.removeAttribute('id'); c.style.transform = `translateX(${from}px)`;
-  shot.append(c); vp.append(shot);
-  const done = () => shot.remove(); setTimeout(done, opt.duration + 300);
-  let a;
-  if (mode === 'fade') a = shot.animate([{ opacity: 1 }, { opacity: 0 }], opt);
-  else {
-    const fwd = to < from, W = parseFloat(pg.style.getPropertyValue('--pw')) || vp.getBoundingClientRect().width;
-    pg.animate([{ transform: `translateX(${to + (fwd ? W : -W)}px)` }, { transform: `translateX(${to}px)` }], opt);
-    const edge = fwd ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
-    a = shot.animate([{ clipPath: 'inset(0 0 0 0)' }, { clipPath: edge }], opt);
-    /* soft shadow along the edge of the incoming page, so it reads as a sheet laid on top */
-    const sh = document.createElement('div'); sh.className = 'turnshade ' + (fwd ? 'fwd' : 'back'); vp.append(sh);
-    const s0 = fwd ? W - 10 : 0, s1 = fwd ? -10 : W;
-    const sa = sh.animate([{ transform: `translateX(${s0}px)`, opacity: 1 }, { transform: `translateX(${s1}px)`, opacity: .6 }], opt);
-    sa.onfinish = sa.oncancel = () => sh.remove(); setTimeout(() => sh.remove(), opt.duration + 300);
-  }
-  a.onfinish = a.oncancel = done;
+  pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration: 300, easing: 'ease-in-out' });
 }
 /* ---- Scroll mode ---- */
 { const base = layout; layout = function(anchor, off){ const r = base(anchor, off); drawRules(); return r; }; }
