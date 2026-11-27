@@ -1763,7 +1763,7 @@ function goPage(n, dir){
 function slide(from, to){
   if (!pg.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   pg.getAnimations().forEach(a => a.cancel());
-  pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration: 220, easing: 'cubic-bezier(.25,.8,.3,1)' });
+  pg.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration: 300, easing: 'ease-in-out' }); /* page flip: starts gently, speeds up, settles gently */
 }
 /* ---- Scroll mode ---- */
 { const base = layout; layout = function(anchor, off){ const r = base(anchor, off); drawRules(); return r; }; }
